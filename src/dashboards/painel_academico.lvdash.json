@@ -11,7 +11,13 @@
       "name": "ds_top_reprovacao",
       "displayName": "Top Reprovacao",
       "queryLines": [
-        "SELECT CONCAT(disciplina_codigo, ' - ', disciplina_nome) as disciplina,   departamento_sigla, semestre,   ROUND(100.0 - taxa_aprovacao, 1) as taxa_reprovacao,   media_nota FROM workspace.sistema_academico.gold_desempenho_disciplina ORDER BY taxa_reprovacao DESC "
+        "SELECT CONCAT(disciplina_codigo, ' - ', disciplina_nome) as disciplina, ",
+        "  departamento_sigla, ",
+        "  ROUND(100.0 - AVG(taxa_aprovacao), 1) as taxa_reprovacao, ",
+        "  ROUND(AVG(media_nota), 1) as media_nota ",
+        "FROM workspace.sistema_academico.gold_desempenho_disciplina ",
+        "GROUP BY disciplina_codigo, disciplina_nome, departamento_sigla ",
+        "ORDER BY taxa_reprovacao DESC LIMIT 10 "
       ]
     },
     {
