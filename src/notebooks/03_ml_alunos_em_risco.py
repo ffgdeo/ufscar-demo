@@ -62,58 +62,33 @@ print(f"Feature table criada com {features_df.count()} alunos.")
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Build training dataset usando Feature Lookups
+# MAGIC ## Build training dataset
+# MAGIC Joins matriculas with disciplina features and the student feature table.
 
 # COMMAND ----------
 
-# Base: cada matricula individual com dados da disciplina (nao trancados, com nota)
-raw_df = spark.sql("""
+# Join matriculas + disciplinas + student_features via SQL (no FE metadata in the model)
+df = spark.sql("""
 SELECT
-  m.matricula_id,
-  m.aluno_id,
   m.nota_p1,
   m.frequencia_pct,
   d.dificuldade,
   d.creditos,
+  COALESCE(sf.cra_acumulado, 6.5) AS cra_acumulado,
+  COALESCE(sf.total_disciplinas_cursadas, 0) AS total_disciplinas_cursadas,
+  COALESCE(sf.total_reprovacoes, 0) AS total_reprovacoes,
+  COALESCE(sf.taxa_aprovacao_pessoal, 0.5) AS taxa_aprovacao_pessoal,
+  COALESCE(sf.semestres_cursados, 0) AS semestres_cursados,
   CASE WHEN m.situacao LIKE 'reprovado%' THEN 1 ELSE 0 END AS reprovado
 FROM workspace.sistema_academico.matriculas m
 JOIN workspace.sistema_academico.disciplinas d ON m.disciplina_id = d.disciplina_id
+LEFT JOIN workspace.sistema_academico.student_features sf ON m.aluno_id = sf.aluno_id
 WHERE m.situacao != 'trancado' AND m.nota_p1 IS NOT NULL
-""")
+""").toPandas()
 
-# Definir feature lookups
-feature_lookups = [
-    FeatureLookup(
-        table_name="workspace.sistema_academico.student_features",
-        feature_names=["cra_acumulado", "total_disciplinas_cursadas", "total_reprovacoes", "taxa_aprovacao_pessoal", "semestres_cursados"],
-        lookup_key=["aluno_id"],
-    ),
-]
-
-# Criar training set com feature lookups
-training_set = fe.create_training_set(
-    df=raw_df,
-    feature_lookups=feature_lookups,
-    label="reprovado",
-    exclude_columns=["matricula_id", "aluno_id"],
-)
-
-df = training_set.load_df().toPandas()
-
-# Convert Decimal columns to float (avoids JSON serialization errors in MLflow)
-for col in df.select_dtypes(include=["object"]).columns:
-    try:
-        df[col] = df[col].astype(float)
-    except (ValueError, TypeError):
-        pass
+# Ensure clean numeric types
 for col in df.columns:
-    if df[col].dtype == object or str(df[col].dtype) == "object":
-        continue
-    df[col] = df[col].astype(float) if "decimal" in str(df[col].dtype).lower() else df[col]
-
-# Force all numeric columns to native Python types
-numeric_cols = df.select_dtypes(include=["number"]).columns
-df[numeric_cols] = df[numeric_cols].apply(pd.to_numeric, errors="coerce")
+    df[col] = pd.to_numeric(df[col], errors="coerce")
 
 print(f"Dataset: {len(df)} rows, {df['reprovado'].mean():.1%} fail rate")
 
