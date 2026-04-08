@@ -4,55 +4,74 @@ import gradio as gr
 import requests
 from databricks.sdk import WorkspaceClient
 
-# Auth — uses the app's service principal credentials automatically
+# Auth — Databricks App service principal
 w = WorkspaceClient()
-host = w.config.host
-token = w.config.token
+host = w.config.host.rstrip("/")
 
-headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+
+def get_headers():
+    """Get fresh auth headers."""
+    try:
+        # Try SDK header factory (works in app context)
+        h = w.config._header_factory()
+        return {"Authorization": h.get("Authorization", ""), "Content-Type": "application/json"}
+    except Exception:
+        # Fallback: use token directly
+        token = getattr(w.config, 'token', None) or os.environ.get("DATABRICKS_TOKEN", "")
+        return {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+
 
 VS_INDEX = "workspace.sistema_academico.exam_chunks_vs_index"
 LLM_ENDPOINT = "databricks-meta-llama-3-3-70b-instruct"
-WAREHOUSE_ID = os.environ.get("DATABRICKS_WAREHOUSE_ID", "")
 
 
-def search_exams(query: str, n: int = 3) -> list:
-    """Search the Vector Search index for relevant exam chunks."""
-    r = requests.post(
-        f"{host}/api/2.0/vector-search/indexes/{VS_INDEX}/query",
-        headers=headers,
-        json={"columns": ["exam_filename", "chunk"], "query_text": query, "num_results": n},
-    )
-    if r.status_code != 200:
-        return []
-    return r.json().get("result", {}).get("data_array", [])
+def search_exams(query: str, n: int = 3) -> tuple:
+    """Search the Vector Search index. Returns (results, error)."""
+    try:
+        headers = get_headers()
+        r = requests.post(
+            f"{host}/api/2.0/vector-search/indexes/{VS_INDEX}/query",
+            headers=headers,
+            json={"columns": ["exam_filename", "chunk"], "query_text": query, "num_results": n},
+        )
+        if r.status_code != 200:
+            return [], f"Vector Search error {r.status_code}: {r.text[:300]}"
+        return r.json().get("result", {}).get("data_array", []), None
+    except Exception as e:
+        return [], str(e)
 
 
 def query_llm(prompt: str) -> str:
     """Call the LLM via the serving endpoint."""
-    r = requests.post(
-        f"{host}/serving-endpoints/{LLM_ENDPOINT}/invocations",
-        headers=headers,
-        json={
-            "messages": [
-                {"role": "system", "content": "Você é o assistente acadêmico da UFSCar. Responda sempre em português brasileiro."},
-                {"role": "user", "content": prompt},
-            ],
-            "max_tokens": 1024,
-        },
-    )
-    if r.status_code == 200:
-        return r.json()["choices"][0]["message"]["content"]
-    return f"Erro ao consultar o modelo: {r.status_code}"
+    try:
+        headers = get_headers()
+        r = requests.post(
+            f"{host}/serving-endpoints/{LLM_ENDPOINT}/invocations",
+            headers=headers,
+            json={
+                "messages": [
+                    {"role": "system", "content": "Você é o assistente acadêmico da UFSCar. Responda sempre em português brasileiro."},
+                    {"role": "user", "content": prompt},
+                ],
+                "max_tokens": 1024,
+            },
+        )
+        if r.status_code == 200:
+            return r.json()["choices"][0]["message"]["content"]
+        return f"Erro ao consultar o modelo ({r.status_code}): {r.text[:200]}"
+    except Exception as e:
+        return f"Erro: {e}"
 
 
 def chat(message: str, history: list) -> str:
     """RAG: search exams → build context → ask LLM."""
-    # Search for relevant exam content
-    results = search_exams(message)
+    results, error = search_exams(message)
+
+    if error:
+        return f"⚠️ Erro na busca: {error}"
 
     if not results:
-        return "Não encontrei provas relevantes para essa pergunta. Tente perguntar sobre uma disciplina específica (ex: Cálculo 2, Banco de Dados, Algoritmos)."
+        return "Não encontrei provas relevantes para essa pergunta. Tente perguntar sobre uma disciplina específica (ex: Cálculo 1, Banco de Dados, Algoritmos)."
 
     # Build context from search results
     context_parts = []
@@ -77,8 +96,6 @@ Se a informação não estiver no contexto, diga que não encontrou dados sobre 
 ## Resposta:"""
 
     response = query_llm(prompt)
-
-    # Append sources
     source_text = ", ".join(sources)
     return f"{response}\n\n---\n📄 *Fontes: {source_text}*"
 
