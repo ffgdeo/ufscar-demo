@@ -18,12 +18,11 @@
       "displayName": "Top Reprovacao",
       "queryLines": [
         "SELECT CONCAT(disciplina_codigo, ' - ', disciplina_nome) as disciplina, ",
-        "  departamento_sigla, ",
-        "  ROUND(100.0 - AVG(taxa_aprovacao), 1) as taxa_reprovacao, ",
-        "  ROUND(AVG(media_nota), 1) as media_nota ",
+        "  departamento_sigla, semestre, ",
+        "  ROUND(100.0 - taxa_aprovacao, 1) as taxa_reprovacao, ",
+        "  media_nota ",
         "FROM workspace.sistema_academico.gold_desempenho_disciplina ",
-        "GROUP BY disciplina_codigo, disciplina_nome, departamento_sigla ",
-        "ORDER BY taxa_reprovacao DESC LIMIT 10 "
+        "ORDER BY taxa_reprovacao DESC "
       ]
     },
     {
@@ -32,10 +31,11 @@
       "queryLines": [
         "SELECT CAST(FLOOR(nota_final) AS INT) as faixa, ",
         "  CASE WHEN nota_final >= 6.0 THEN 'Aprovado' ELSE 'Reprovado' END as resultado, ",
+        "  semestre, ",
         "  COUNT(*) as total ",
         "FROM workspace.sistema_academico.matriculas ",
         "WHERE nota_final IS NOT NULL AND situacao != 'trancado' ",
-        "GROUP BY FLOOR(nota_final), CASE WHEN nota_final >= 6.0 THEN 'Aprovado' ELSE 'Reprovado' END ",
+        "GROUP BY FLOOR(nota_final), CASE WHEN nota_final >= 6.0 THEN 'Aprovado' ELSE 'Reprovado' END, semestre ",
         "ORDER BY faixa "
       ]
     },
@@ -55,11 +55,11 @@
       "name": "ds_aprovacao_curso",
       "displayName": "Aprovacao por Curso",
       "queryLines": [
-        "SELECT curso_sigla, ",
+        "SELECT curso_sigla, semestre, ",
         "  ROUND(AVG(cra_acumulado), 2) as cra_medio, ",
         "  COUNT(DISTINCT aluno_id) as total_alunos ",
         "FROM workspace.sistema_academico.gold_desempenho_aluno ",
-        "GROUP BY curso_sigla ORDER BY cra_medio DESC "
+        "GROUP BY curso_sigla, semestre ORDER BY cra_medio DESC "
       ]
     },
     {
@@ -426,15 +426,15 @@
                       "expression": "`disciplina`"
                     },
                     {
-                      "name": "taxa_reprovacao",
-                      "expression": "`taxa_reprovacao`"
+                      "name": "avg(taxa_reprovacao)",
+                      "expression": "AVG(`taxa_reprovacao`)"
                     },
                     {
                       "name": "departamento_sigla",
                       "expression": "`departamento_sigla`"
                     }
                   ],
-                  "disaggregated": true
+                  "disaggregated": false
                 }
               }
             ],
@@ -443,7 +443,7 @@
               "widgetType": "bar",
               "encodings": {
                 "x": {
-                  "fieldName": "taxa_reprovacao",
+                  "fieldName": "avg(taxa_reprovacao)",
                   "scale": {
                     "type": "quantitative"
                   },
@@ -491,11 +491,11 @@
                       "expression": "`curso_sigla`"
                     },
                     {
-                      "name": "cra_medio",
-                      "expression": "`cra_medio`"
+                      "name": "avg(cra_medio)",
+                      "expression": "AVG(`cra_medio`)"
                     }
                   ],
-                  "disaggregated": true
+                  "disaggregated": false
                 }
               }
             ],
@@ -511,7 +511,7 @@
                   "displayName": "Curso"
                 },
                 "y": {
-                  "fieldName": "cra_medio",
+                  "fieldName": "avg(cra_medio)",
                   "scale": {
                     "type": "quantitative"
                   },
@@ -545,15 +545,15 @@
                       "expression": "`faixa`"
                     },
                     {
-                      "name": "total",
-                      "expression": "`total`"
+                      "name": "sum(total)",
+                      "expression": "SUM(`total`)"
                     },
                     {
                       "name": "resultado",
                       "expression": "`resultado`"
                     }
                   ],
-                  "disaggregated": true
+                  "disaggregated": false
                 }
               }
             ],
@@ -569,7 +569,7 @@
                   "displayName": "Nota"
                 },
                 "y": {
-                  "fieldName": "total",
+                  "fieldName": "sum(total)",
                   "scale": {
                     "type": "quantitative"
                   },
@@ -764,7 +764,17 @@
                 "color": {
                   "fieldName": "nivel_risco",
                   "scale": {
-                    "type": "categorical"
+                    "type": "categorical",
+                    "domain": [
+                      "ALTO",
+                      "MÉDIO",
+                      "BAIXO"
+                    ],
+                    "range": [
+                      "#E53935",
+                      "#FDD835",
+                      "#43A047"
+                    ]
                   },
                   "displayName": "Risco"
                 }
@@ -829,7 +839,17 @@
                 "color": {
                   "fieldName": "nivel_risco",
                   "scale": {
-                    "type": "categorical"
+                    "type": "categorical",
+                    "domain": [
+                      "ALTO",
+                      "MÉDIO",
+                      "BAIXO"
+                    ],
+                    "range": [
+                      "#E53935",
+                      "#FDD835",
+                      "#43A047"
+                    ]
                   },
                   "displayName": "Risco"
                 }
@@ -898,7 +918,17 @@
                 "color": {
                   "fieldName": "nivel_risco",
                   "scale": {
-                    "type": "categorical"
+                    "type": "categorical",
+                    "domain": [
+                      "ALTO",
+                      "MÉDIO",
+                      "BAIXO"
+                    ],
+                    "range": [
+                      "#E53935",
+                      "#FDD835",
+                      "#43A047"
+                    ]
                   },
                   "displayName": "Risco"
                 },
@@ -1311,6 +1341,56 @@
             "y": 15,
             "width": 6,
             "height": 7
+          }
+        }
+      ]
+    },
+    {
+      "name": "filters",
+      "displayName": "Filters",
+      "pageType": "PAGE_TYPE_GLOBAL_FILTERS",
+      "layout": [
+        {
+          "widget": {
+            "name": "filter-semestre",
+            "queries": [
+              {
+                "name": "ds_evolucao_semestre",
+                "query": {
+                  "datasetName": "ds_evolucao",
+                  "fields": [
+                    {
+                      "name": "semestre",
+                      "expression": "`semestre`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "semestre",
+                    "displayName": "Semestre",
+                    "queryName": "ds_evolucao_semestre"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Semestre"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 2,
+            "height": 2
           }
         }
       ]
