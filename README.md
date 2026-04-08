@@ -22,9 +22,9 @@ End-to-end data intelligence demo for university grading analytics, built on Dat
    - Paste the repo URL: `https://github.com/ffgdeo/ufscar-demo.git`
    - Branch: `main`, click **Create Git Folder**
 
-2. **Configure the bundle target**
+2. **Update the workspace URL**
    - Open `databricks.yml` in the cloned folder
-   - Update the `profile` under `targets.dev` to match your `~/.databrickscfg` profile name
+   - Change `host` under `targets.dev.workspace` to your workspace URL
    - If your warehouse has a different name, update the `warehouse_id` lookup
 
 3. **Deploy the bundle**
