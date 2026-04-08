@@ -42,12 +42,10 @@ serialized_space = json.dumps({
         ], key=lambda x: x["id"]),
     },
     "instructions": {
-        "text_instructions": sorted([
+        "text_instructions": [
             {"id": uid(), "content": [
-                "Você é o assistente acadêmico da UFSCar (Universidade Federal de São Carlos).\n",
-                "Responda SEMPRE em português brasileiro.\n",
-            ]},
-            {"id": uid(), "content": [
+                "Você é o assistente acadêmico da UFSCar. Responda SEMPRE em português brasileiro.\n",
+                "\n",
                 "## Regras do sistema acadêmico\n",
                 "- Escala de notas: 0 a 10\n",
                 "- nota_final = média aritmética de nota_p1 e nota_p2\n",
@@ -55,23 +53,21 @@ serialized_space = json.dumps({
                 "- Situações: aprovado, reprovado_nota, reprovado_frequencia, reprovado_nota_freq, trancado\n",
                 "- Semestres: 2023/1, 2023/2, 2024/1, 2024/2, 2025/1\n",
                 "- CRA = Coeficiente de Rendimento Acadêmico = média acumulada das notas finais\n",
-            ]},
-            {"id": uid(), "content": [
+                "\n",
                 "## Joins entre tabelas\n",
-                "- matriculas.aluno_id = alunos.aluno_id (matrícula → aluno)\n",
-                "- matriculas.disciplina_id = disciplinas.disciplina_id (matrícula → disciplina)\n",
-                "- matriculas.professor_id = professores.professor_id (matrícula → professor)\n",
+                "- matriculas.aluno_id = alunos.aluno_id\n",
+                "- matriculas.disciplina_id = disciplinas.disciplina_id\n",
+                "- matriculas.professor_id = professores.professor_id\n",
                 "- As tabelas gold_ já têm joins pré-feitos (aluno_nome, curso_sigla, etc.)\n",
-            ]},
-            {"id": uid(), "content": [
+                "\n",
                 "## Dicas importantes\n",
-                "- Sempre filtre situacao != 'trancado' ao calcular taxas de aprovação/reprovação\n",
-                "- 'Cálculo 2' = código MAT102 na tabela disciplinas\n",
+                "- Sempre filtre situacao != 'trancado' ao calcular taxas\n",
+                "- 'Cálculo 2' = código MAT102\n",
                 "- Para risco de alunos, use gold_alunos_em_risco (nivel_risco: ALTO/MÉDIO/BAIXO)\n",
                 "- Para evolução de um aluno, use gold_desempenho_aluno filtrado por aluno_id\n",
                 "- dificuldade em disciplinas: 0 (fácil) a 1 (muito difícil)\n",
             ]},
-        ], key=lambda x: x["id"]),
+        ],
         "example_question_sqls": sorted([
             {"id": sql_ids[0], "question": ["Top 10 disciplinas com maior taxa de reprovação"], "sql": [
                 "SELECT d.codigo, d.nome, COUNT(*) as total, ROUND(SUM(CASE WHEN m.situacao LIKE 'reprovado%' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) as taxa_reprovacao FROM workspace.sistema_academico.matriculas m JOIN workspace.sistema_academico.disciplinas d ON m.disciplina_id = d.disciplina_id WHERE m.situacao != 'trancado' GROUP BY d.codigo, d.nome ORDER BY taxa_reprovacao DESC LIMIT 10"
