@@ -1,0 +1,153 @@
+{
+  "version": 2,
+  "config": {
+    "sample_questions": [
+      {
+        "id": "2161743c673949cba2a81a8432e4b80d",
+        "question": [
+          "Quais alunos de Ciência da Computação reprovaram em Cálculo 2?"
+        ]
+      },
+      {
+        "id": "32ce9723362140db852a38e5e15b90ed",
+        "question": [
+          "Mostre a evolução do desempenho do aluno 42"
+        ]
+      },
+      {
+        "id": "a35bd3d07ad64deaa9d6599a27e0f84a",
+        "question": [
+          "Quais cursos têm o melhor CRA médio?"
+        ]
+      },
+      {
+        "id": "a4661bd5c9204810ae7b469d3dc14a28",
+        "question": [
+          "Quais disciplinas têm a maior taxa de reprovação?"
+        ]
+      },
+      {
+        "id": "a98740c418174e84a67f4df430e41a0f",
+        "question": [
+          "Quantos alunos estão ativos por curso?"
+        ]
+      },
+      {
+        "id": "b63a1f00c6f2422c99d429fdb2c26e3b",
+        "question": [
+          "Quantos alunos estão em risco alto no semestre 2025/1?"
+        ]
+      },
+      {
+        "id": "ce554c98d34944bda70b1e10eadde593",
+        "question": [
+          "Qual professor tem a melhor taxa de aprovação?"
+        ]
+      },
+      {
+        "id": "fc5f851b8aed4f339bdaea7ad3e3d373",
+        "question": [
+          "Qual a média de notas de Cálculo 2 por semestre?"
+        ]
+      }
+    ]
+  },
+  "instructions": {
+    "example_question_sqls": [
+      {
+        "id": "28636bf27f814f64ab22bf1126aab58c",
+        "question": [
+          "Top 10 disciplinas com maior taxa de reprovação"
+        ],
+        "sql": [
+          "SELECT d.codigo, d.nome, COUNT(*) as total, ROUND(SUM(CASE WHEN m.situacao LIKE 'reprovado%' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) as taxa_reprovacao FROM workspace.sistema_academico.matriculas m JOIN workspace.sistema_academico.disciplinas d ON m.disciplina_id = d.disciplina_id WHERE m.situacao != 'trancado' GROUP BY d.codigo, d.nome ORDER BY taxa_reprovacao DESC LIMIT 10"
+        ]
+      },
+      {
+        "id": "48056fb019414cbaad8377664a0caef7",
+        "question": [
+          "Alunos em risco alto no semestre atual"
+        ],
+        "sql": [
+          "SELECT aluno_nome, curso_sigla, media_atual, freq_atual, total_reprovacoes_historico, score_risco FROM workspace.sistema_academico.gold_alunos_em_risco WHERE nivel_risco = 'ALTO' ORDER BY score_risco DESC"
+        ]
+      },
+      {
+        "id": "687488eb7ddb4edeabb506246ce1261e",
+        "question": [
+          "Evolução de Cálculo 2 por semestre"
+        ],
+        "sql": [
+          "SELECT m.semestre, ROUND(AVG(m.nota_final), 2) as media, ROUND(AVG(m.nota_p1), 2) as media_p1, ROUND(AVG(m.nota_p2), 2) as media_p2, COUNT(*) as alunos FROM workspace.sistema_academico.matriculas m JOIN workspace.sistema_academico.disciplinas d ON m.disciplina_id = d.disciplina_id WHERE d.codigo = 'MAT102' AND m.situacao != 'trancado' GROUP BY m.semestre ORDER BY m.semestre"
+        ]
+      },
+      {
+        "id": "919c9a60e4cd4388bb69f36462d9a89a",
+        "question": [
+          "CRA médio por curso"
+        ],
+        "sql": [
+          "SELECT curso_sigla, ROUND(AVG(cra_acumulado), 2) as cra_medio, COUNT(DISTINCT aluno_id) as alunos FROM workspace.sistema_academico.gold_desempenho_aluno GROUP BY curso_sigla ORDER BY cra_medio DESC"
+        ]
+      },
+      {
+        "id": "c978124476434868886c13b9b1b577c3",
+        "question": [
+          "Alunos que passaram na P1 mas reprovaram no final"
+        ],
+        "sql": [
+          "SELECT a.nome, d.codigo, d.nome as disciplina, m.nota_p1, m.nota_p2, m.nota_final, m.frequencia_pct, m.situacao FROM workspace.sistema_academico.matriculas m JOIN workspace.sistema_academico.alunos a ON m.aluno_id = a.aluno_id JOIN workspace.sistema_academico.disciplinas d ON m.disciplina_id = d.disciplina_id WHERE m.nota_p1 >= 6.0 AND m.situacao LIKE 'reprovado%' ORDER BY m.nota_p1 DESC LIMIT 20"
+        ]
+      },
+      {
+        "id": "ecb9369f98af4280b5e8674d9da23271",
+        "question": [
+          "Distribuição de alunos por curso no semestre atual"
+        ],
+        "sql": [
+          "SELECT curso_sigla, curso_nome, COUNT(DISTINCT aluno_id) as total FROM workspace.sistema_academico.gold_desempenho_aluno WHERE semestre = '2025/1' GROUP BY curso_sigla, curso_nome ORDER BY total DESC"
+        ]
+      }
+    ]
+  },
+  "data_sources": {
+    "tables": [
+      {
+        "identifier": "workspace.sistema_academico.alunos",
+        "description": [
+          "Cadastro de 800 estudantes. status: ativo, formado, trancado. ano_ingresso: 2021-2024. curso_id identifica o programa. Use gold_desempenho_aluno para curso_sigla sem JOIN."
+        ]
+      },
+      {
+        "identifier": "workspace.sistema_academico.disciplinas",
+        "description": [
+          "Catálogo de 45 disciplinas. codigo identifica (ex: MAT102 = Cálculo 2, CMP201 = Algoritmos). dificuldade: 0.0 (fácil) a 1.0 (difícil). JOIN com matriculas via disciplina_id."
+        ]
+      },
+      {
+        "identifier": "workspace.sistema_academico.gold_alunos_em_risco",
+        "description": [
+          "Alunos em risco semestre 2025/1. nivel_risco: ALTO/MÉDIO/BAIXO. score_risco 0-100. Já tem aluno_nome, curso_sigla, media_atual, freq_atual."
+        ]
+      },
+      {
+        "identifier": "workspace.sistema_academico.gold_desempenho_aluno",
+        "description": [
+          "Performance por aluno/semestre. Já tem aluno_nome, curso_sigla (sem JOIN). cra_acumulado = média acumulada. Use para evolução de alunos e ranking de CRA."
+        ]
+      },
+      {
+        "identifier": "workspace.sistema_academico.gold_desempenho_disciplina",
+        "description": [
+          "Métricas por disciplina/semestre. Já tem disciplina_codigo, departamento_sigla. taxa_aprovacao (0-100). media_nota, media_p1, media_p2 (0-10)."
+        ]
+      },
+      {
+        "identifier": "workspace.sistema_academico.matriculas",
+        "description": [
+          "Tabela fato principal: cada linha = 1 aluno × 1 disciplina × 1 semestre. nota_final = média(nota_p1, nota_p2). Aprovação requer nota_final >= 6.0 E frequencia_pct >= 75%. situacao: aprovado, reprovado_nota, reprovado_frequencia, reprovado_nota_freq, trancado. Sempre filtre situacao != 'trancado' ao calcular taxas. JOIN com alunos via aluno_id. JOIN com disciplinas via disciplina_id. JOIN com professores via professor_id."
+        ]
+      }
+    ]
+  }
+}
