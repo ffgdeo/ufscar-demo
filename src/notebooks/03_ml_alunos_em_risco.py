@@ -140,12 +140,10 @@ with mlflow.start_run(run_name="gradient_boosting_fe_v1") as run:
     mlflow.log_params({"model_type":"GradientBoosting","n_estimators":100,"max_depth":4})
     mlflow.log_metrics({"auc_roc":auc,"accuracy":report["accuracy"],"recall_reprovado":report["1"]["recall"]})
 
-    # Log model with feature lookups via Feature Engineering client
-    fe.log_model(
-        model=model,
+    # Log model with MLflow (no feature lookup metadata — avoids online store requirement for serving)
+    mlflow.sklearn.log_model(
+        model,
         artifact_path="model",
-        flavor=mlflow.sklearn,
-        training_set=training_set,
         input_example=X_test.head(1),
     )
 
