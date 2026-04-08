@@ -4,133 +4,84 @@
       "name": "ds_counters",
       "displayName": "Indicadores Gerais",
       "queryLines": [
-        "SELECT ",
-        "  (SELECT COUNT(*) FROM workspace.sistema_academico.alunos WHERE status = 'ativo') as total_alunos_ativos, ",
-        "  (SELECT COUNT(DISTINCT aluno_id) FROM workspace.sistema_academico.matriculas WHERE semestre = '2025/1' AND situacao != 'trancado') as alunos_cursando, ",
-        "  (SELECT ROUND(SUM(CASE WHEN situacao = 'aprovado' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) FROM workspace.sistema_academico.matriculas WHERE situacao != 'trancado') as taxa_aprovacao, ",
-        "  (SELECT ROUND(AVG(nota_final), 2) FROM workspace.sistema_academico.matriculas WHERE situacao != 'trancado') as media_geral, ",
-        "  (SELECT COUNT(*) FROM workspace.sistema_academico.gold_alunos_em_risco WHERE nivel_risco = 'ALTO') as alunos_risco_alto, ",
-        "  (SELECT COUNT(*) FROM workspace.sistema_academico.gold_alunos_em_risco WHERE nivel_risco = 'MÉDIO') as alunos_risco_medio "
+        "SELECT   (SELECT COUNT(*) FROM workspace.sistema_academico.alunos WHERE status = 'ativo') as total_alunos_ativos,   (SELECT COUNT(DISTINCT aluno_id) FROM workspace.sistema_academico.matriculas WHERE semestre = '2025/1' AND situacao != 'trancado') as alunos_cursando,   (SELECT ROUND(SUM(CASE WHEN situacao = 'aprovado' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) FROM workspace.sistema_academico.matriculas WHERE situacao != 'trancado') as taxa_aprovacao,   (SELECT ROUND(AVG(nota_final), 2) FROM workspace.sistema_academico.matriculas WHERE situacao != 'trancado') as media_geral,   (SELECT COUNT(*) FROM workspace.sistema_academico.gold_alunos_em_risco WHERE nivel_risco = 'ALTO') as alunos_risco_alto,   (SELECT COUNT(*) FROM workspace.sistema_academico.gold_alunos_em_risco WHERE nivel_risco = 'MÉDIO') as alunos_risco_medio "
       ]
     },
     {
       "name": "ds_top_reprovacao",
       "displayName": "Top Reprovacao",
       "queryLines": [
-        "SELECT CONCAT(disciplina_codigo, ' - ', disciplina_nome) as disciplina, ",
-        "  departamento_sigla, semestre, ",
-        "  ROUND(100.0 - taxa_aprovacao, 1) as taxa_reprovacao, ",
-        "  media_nota ",
-        "FROM workspace.sistema_academico.gold_desempenho_disciplina ",
-        "ORDER BY taxa_reprovacao DESC "
+        "SELECT CONCAT(disciplina_codigo, ' - ', disciplina_nome) as disciplina,   departamento_sigla, semestre,   ROUND(100.0 - taxa_aprovacao, 1) as taxa_reprovacao,   media_nota FROM workspace.sistema_academico.gold_desempenho_disciplina ORDER BY taxa_reprovacao DESC "
       ]
     },
     {
       "name": "ds_dist_notas",
       "displayName": "Distribuicao Notas",
       "queryLines": [
-        "SELECT CAST(FLOOR(nota_final) AS INT) as faixa, ",
-        "  CASE WHEN nota_final >= 6.0 THEN 'Aprovado' ELSE 'Reprovado' END as resultado, ",
-        "  semestre, ",
-        "  COUNT(*) as total ",
-        "FROM workspace.sistema_academico.matriculas ",
-        "WHERE nota_final IS NOT NULL AND situacao != 'trancado' ",
-        "GROUP BY FLOOR(nota_final), CASE WHEN nota_final >= 6.0 THEN 'Aprovado' ELSE 'Reprovado' END, semestre ",
-        "ORDER BY faixa "
+        "SELECT CAST(FLOOR(nota_final) AS INT) as faixa,   CASE WHEN nota_final >= 6.0 THEN 'Aprovado' ELSE 'Reprovado' END as resultado,   semestre,   COUNT(*) as total FROM workspace.sistema_academico.matriculas WHERE nota_final IS NOT NULL AND situacao != 'trancado' GROUP BY FLOOR(nota_final), CASE WHEN nota_final >= 6.0 THEN 'Aprovado' ELSE 'Reprovado' END, semestre ORDER BY faixa "
       ]
     },
     {
       "name": "ds_evolucao",
       "displayName": "Evolucao por Semestre",
       "queryLines": [
-        "SELECT semestre, ",
-        "  ROUND(AVG(taxa_aprovacao), 1) as taxa_aprovacao, ",
-        "  ROUND(AVG(media_nota), 2) as media_nota, ",
-        "  SUM(total_alunos) as total_matriculas ",
-        "FROM workspace.sistema_academico.gold_desempenho_disciplina ",
-        "GROUP BY semestre ORDER BY semestre "
+        "SELECT semestre,   ROUND(AVG(taxa_aprovacao), 1) as taxa_aprovacao,   ROUND(AVG(media_nota), 2) as media_nota,   SUM(total_alunos) as total_matriculas FROM workspace.sistema_academico.gold_desempenho_disciplina GROUP BY semestre ORDER BY semestre "
       ]
     },
     {
       "name": "ds_aprovacao_curso",
       "displayName": "Aprovacao por Curso",
       "queryLines": [
-        "SELECT curso_sigla, semestre, ",
-        "  ROUND(AVG(cra_acumulado), 2) as cra_medio, ",
-        "  COUNT(DISTINCT aluno_id) as total_alunos ",
-        "FROM workspace.sistema_academico.gold_desempenho_aluno ",
-        "GROUP BY curso_sigla, semestre ORDER BY cra_medio DESC "
+        "SELECT curso_sigla, semestre,   ROUND(AVG(cra_acumulado), 2) as cra_medio,   COUNT(DISTINCT aluno_id) as total_alunos FROM workspace.sistema_academico.gold_desempenho_aluno GROUP BY curso_sigla, semestre ORDER BY cra_medio DESC "
       ]
     },
     {
       "name": "ds_risco_dist",
       "displayName": "Distribuicao Risco",
       "queryLines": [
-        "SELECT nivel_risco, COUNT(*) as total ",
-        "FROM workspace.sistema_academico.gold_alunos_em_risco ",
-        "GROUP BY nivel_risco "
+        "SELECT nivel_risco, COUNT(*) as total FROM workspace.sistema_academico.gold_alunos_em_risco GROUP BY nivel_risco "
       ]
     },
     {
       "name": "ds_risco_top",
       "displayName": "Top 20 Risco",
       "queryLines": [
-        "SELECT aluno_nome, curso_sigla, media_atual, freq_atual, ",
-        "  cra_historico, total_reprovacoes_historico, score_risco, nivel_risco ",
-        "FROM workspace.sistema_academico.gold_alunos_em_risco ",
-        "ORDER BY score_risco DESC LIMIT 20 "
+        "SELECT aluno_nome, curso_sigla, media_atual, freq_atual,   cra_historico, total_reprovacoes_historico, score_risco, nivel_risco FROM workspace.sistema_academico.gold_alunos_em_risco ORDER BY score_risco DESC LIMIT 20 "
       ]
     },
     {
       "name": "ds_risco_curso",
       "displayName": "Risco por Curso",
       "queryLines": [
-        "SELECT curso_sigla, nivel_risco, COUNT(*) as total ",
-        "FROM workspace.sistema_academico.gold_alunos_em_risco ",
-        "GROUP BY curso_sigla, nivel_risco ORDER BY curso_sigla "
+        "SELECT curso_sigla, nivel_risco, COUNT(*) as total FROM workspace.sistema_academico.gold_alunos_em_risco GROUP BY curso_sigla, nivel_risco ORDER BY curso_sigla "
       ]
     },
     {
       "name": "ds_risco_scatter",
       "displayName": "Risco Scatter",
       "queryLines": [
-        "SELECT aluno_nome, curso_sigla, media_atual, freq_atual, score_risco, nivel_risco ",
-        "FROM workspace.sistema_academico.gold_alunos_em_risco "
+        "SELECT aluno_nome, curso_sigla, media_atual, freq_atual, score_risco, nivel_risco FROM workspace.sistema_academico.gold_alunos_em_risco "
       ]
     },
     {
       "name": "ds_depto",
       "displayName": "Aprovacao por Departamento",
       "queryLines": [
-        "SELECT departamento_sigla, ",
-        "  ROUND(AVG(taxa_aprovacao), 1) as taxa_aprovacao, ",
-        "  ROUND(AVG(media_nota), 2) as media_nota, ",
-        "  SUM(total_alunos) as total_matriculas ",
-        "FROM workspace.sistema_academico.gold_desempenho_disciplina ",
-        "GROUP BY departamento_sigla ORDER BY taxa_aprovacao "
+        "SELECT departamento_sigla,   ROUND(AVG(taxa_aprovacao), 1) as taxa_aprovacao,   ROUND(AVG(media_nota), 2) as media_nota,   SUM(total_alunos) as total_matriculas FROM workspace.sistema_academico.gold_desempenho_disciplina GROUP BY departamento_sigla ORDER BY taxa_aprovacao "
       ]
     },
     {
       "name": "ds_depto_semestre",
       "displayName": "Departamento por Semestre",
       "queryLines": [
-        "SELECT departamento_sigla, semestre, ",
-        "  ROUND(AVG(taxa_aprovacao), 1) as taxa_aprovacao ",
-        "FROM workspace.sistema_academico.gold_desempenho_disciplina ",
-        "GROUP BY departamento_sigla, semestre ORDER BY semestre "
+        "SELECT departamento_sigla, semestre,   ROUND(AVG(taxa_aprovacao), 1) as taxa_aprovacao FROM workspace.sistema_academico.gold_desempenho_disciplina GROUP BY departamento_sigla, semestre ORDER BY semestre "
       ]
     },
     {
       "name": "ds_heatmap",
       "displayName": "Notas Disciplinas Dificeis",
       "queryLines": [
-        "SELECT CONCAT(disciplina_codigo, ' - ', disciplina_nome) as disciplina, ",
-        "  semestre, media_nota, taxa_aprovacao ",
-        "FROM workspace.sistema_academico.gold_desempenho_disciplina ",
-        "WHERE disciplina_codigo IN ( ",
-        "  SELECT disciplina_codigo FROM workspace.sistema_academico.gold_desempenho_disciplina ",
-        "  GROUP BY disciplina_codigo ORDER BY AVG(taxa_aprovacao) LIMIT 10 ",
-        ") ORDER BY disciplina, semestre "
+        "SELECT CONCAT(disciplina_codigo, ' - ', disciplina_nome) as disciplina,   semestre, media_nota, taxa_aprovacao FROM workspace.sistema_academico.gold_desempenho_disciplina WHERE disciplina_codigo IN (   SELECT disciplina_codigo FROM workspace.sistema_academico.gold_desempenho_disciplina   GROUP BY disciplina_codigo ORDER BY AVG(taxa_aprovacao) LIMIT 10 ) ORDER BY disciplina, semestre "
       ]
     }
   ],
@@ -138,7 +89,6 @@
     {
       "name": "visao-geral",
       "displayName": "Visão Geral",
-      "pageType": "PAGE_TYPE_CANVAS",
       "layout": [
         {
           "widget": {
@@ -662,12 +612,12 @@
             "height": 6
           }
         }
-      ]
+      ],
+      "pageType": "PAGE_TYPE_CANVAS"
     },
     {
       "name": "risco",
       "displayName": "Alunos em Risco",
-      "pageType": "PAGE_TYPE_CANVAS",
       "layout": [
         {
           "widget": {
@@ -738,12 +688,12 @@
                   "datasetName": "ds_risco_dist",
                   "fields": [
                     {
-                      "name": "nivel_risco",
-                      "expression": "`nivel_risco`"
-                    },
-                    {
                       "name": "total",
                       "expression": "`total`"
+                    },
+                    {
+                      "name": "nivel_risco",
+                      "expression": "`nivel_risco`"
                     }
                   ],
                   "disaggregated": true
@@ -752,6 +702,10 @@
             ],
             "spec": {
               "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Distribuição por Nível"
+              },
               "widgetType": "pie",
               "encodings": {
                 "angle": {
@@ -763,25 +717,34 @@
                 },
                 "color": {
                   "fieldName": "nivel_risco",
+                  "displayName": "Risco",
                   "scale": {
                     "type": "categorical",
-                    "domain": [
-                      "ALTO",
-                      "MÉDIO",
-                      "BAIXO"
-                    ],
-                    "range": [
-                      "#E53935",
-                      "#FDD835",
-                      "#43A047"
+                    "mappings": [
+                      {
+                        "value": "BAIXO",
+                        "color": {
+                          "themeColorType": "visualizationColors",
+                          "position": 3
+                        }
+                      },
+                      {
+                        "value": "ALTO",
+                        "color": {
+                          "themeColorType": "visualizationColors",
+                          "position": 4
+                        }
+                      },
+                      {
+                        "value": "MÉDIO",
+                        "color": {
+                          "themeColorType": "visualizationColors",
+                          "position": 2
+                        }
+                      }
                     ]
-                  },
-                  "displayName": "Risco"
+                  }
                 }
-              },
-              "frame": {
-                "showTitle": true,
-                "title": "Distribuição por Nível"
               }
             }
           },
@@ -802,16 +765,16 @@
                   "datasetName": "ds_risco_curso",
                   "fields": [
                     {
+                      "name": "nivel_risco",
+                      "expression": "`nivel_risco`"
+                    },
+                    {
                       "name": "curso_sigla",
                       "expression": "`curso_sigla`"
                     },
                     {
                       "name": "total",
                       "expression": "`total`"
-                    },
-                    {
-                      "name": "nivel_risco",
-                      "expression": "`nivel_risco`"
                     }
                   ],
                   "disaggregated": true
@@ -820,43 +783,56 @@
             ],
             "spec": {
               "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Risco por Curso"
+              },
               "widgetType": "bar",
               "encodings": {
                 "x": {
                   "fieldName": "curso_sigla",
+                  "displayName": "Curso",
                   "scale": {
                     "type": "categorical"
-                  },
-                  "displayName": "Curso"
+                  }
                 },
                 "y": {
                   "fieldName": "total",
+                  "displayName": "Alunos",
                   "scale": {
                     "type": "quantitative"
-                  },
-                  "displayName": "Alunos"
+                  }
                 },
                 "color": {
                   "fieldName": "nivel_risco",
+                  "displayName": "Risco",
                   "scale": {
                     "type": "categorical",
-                    "domain": [
-                      "ALTO",
-                      "MÉDIO",
-                      "BAIXO"
-                    ],
-                    "range": [
-                      "#E53935",
-                      "#FDD835",
-                      "#43A047"
+                    "mappings": [
+                      {
+                        "value": "ALTO",
+                        "color": {
+                          "themeColorType": "visualizationColors",
+                          "position": 4
+                        }
+                      },
+                      {
+                        "value": "BAIXO",
+                        "color": {
+                          "themeColorType": "visualizationColors",
+                          "position": 3
+                        }
+                      },
+                      {
+                        "value": "MÉDIO",
+                        "color": {
+                          "themeColorType": "visualizationColors",
+                          "position": 2
+                        }
+                      }
                     ]
-                  },
-                  "displayName": "Risco"
+                  }
                 }
-              },
-              "frame": {
-                "showTitle": true,
-                "title": "Risco por Curso"
               }
             }
           },
@@ -877,20 +853,16 @@
                   "datasetName": "ds_risco_scatter",
                   "fields": [
                     {
+                      "name": "nivel_risco",
+                      "expression": "`nivel_risco`"
+                    },
+                    {
                       "name": "media_atual",
                       "expression": "`media_atual`"
                     },
                     {
                       "name": "freq_atual",
                       "expression": "`freq_atual`"
-                    },
-                    {
-                      "name": "nivel_risco",
-                      "expression": "`nivel_risco`"
-                    },
-                    {
-                      "name": "aluno_nome",
-                      "expression": "`aluno_nome`"
                     }
                   ],
                   "disaggregated": true
@@ -899,47 +871,56 @@
             ],
             "spec": {
               "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Média vs Frequência — Todos os Alunos em Risco"
+              },
               "widgetType": "scatter",
               "encodings": {
                 "x": {
                   "fieldName": "media_atual",
+                  "displayName": "Média Atual",
                   "scale": {
                     "type": "quantitative"
-                  },
-                  "displayName": "Média Atual"
+                  }
                 },
                 "y": {
                   "fieldName": "freq_atual",
+                  "displayName": "Frequência (%)",
                   "scale": {
                     "type": "quantitative"
-                  },
-                  "displayName": "Frequência (%)"
+                  }
                 },
                 "color": {
                   "fieldName": "nivel_risco",
+                  "displayName": "Risco",
                   "scale": {
                     "type": "categorical",
-                    "domain": [
-                      "ALTO",
-                      "MÉDIO",
-                      "BAIXO"
-                    ],
-                    "range": [
-                      "#E53935",
-                      "#FDD835",
-                      "#43A047"
+                    "mappings": [
+                      {
+                        "value": "ALTO",
+                        "color": {
+                          "themeColorType": "visualizationColors",
+                          "position": 4
+                        }
+                      },
+                      {
+                        "value": "BAIXO",
+                        "color": {
+                          "themeColorType": "visualizationColors",
+                          "position": 3
+                        }
+                      },
+                      {
+                        "value": "MÉDIO",
+                        "color": {
+                          "themeColorType": "visualizationColors",
+                          "position": 2
+                        }
+                      }
                     ]
-                  },
-                  "displayName": "Risco"
-                },
-                "label": {
-                  "fieldName": "aluno_nome",
-                  "displayName": "Aluno"
+                  }
                 }
-              },
-              "frame": {
-                "showTitle": true,
-                "title": "Média vs Frequência — Todos os Alunos em Risco"
               }
             }
           },
@@ -1064,12 +1045,12 @@
             "height": 7
           }
         }
-      ]
+      ],
+      "pageType": "PAGE_TYPE_CANVAS"
     },
     {
       "name": "departamento",
       "displayName": "Por Departamento",
-      "pageType": "PAGE_TYPE_CANVAS",
       "layout": [
         {
           "widget": {
@@ -1343,12 +1324,12 @@
             "height": 7
           }
         }
-      ]
+      ],
+      "pageType": "PAGE_TYPE_CANVAS"
     },
     {
       "name": "filters",
       "displayName": "Filters",
-      "pageType": "PAGE_TYPE_GLOBAL_FILTERS",
       "layout": [
         {
           "widget": {
@@ -1393,7 +1374,8 @@
             "height": 2
           }
         }
-      ]
+      ],
+      "pageType": "PAGE_TYPE_GLOBAL_FILTERS"
     }
   ]
 }
