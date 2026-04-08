@@ -11,6 +11,7 @@ End-to-end data intelligence demo for university grading analytics, built on Dat
 | **Genie Space** | Natural language queries over academic data (Portuguese) |
 | **ML Model** | Gradient Boosting to predict at-risk students from P1 grades |
 | **RAG Pipeline** | Semantic search over exam PDFs via Vector Search + LLM |
+| **Chatbot App** | Gradio chat interface for exam Q&A (powered by RAG) |
 
 ## Quick start
 
@@ -37,9 +38,15 @@ End-to-end data intelligence demo for university grading analytics, built on Dat
    - Find **"[dev] UFSCar Demo — Setup"** and click **Run Now**
    - Wait ~10–15 min for all tasks to complete (data generation, pipeline, ML, RAG, Genie)
 
-5. **Explore the results**
+5. **Start the chatbot app**
+   - Go to **Apps** in the sidebar
+   - Find **assistente-provas-dev** and click **Start**
+   - Once running, open the app URL to chat with the exam assistant
+
+6. **Explore the results**
    - **Dashboard**: Workspace → search "Painel Acadêmico"
    - **Genie Space**: Genie → "Sistema Acadêmico Inteligente"
+   - **Chatbot**: Apps → "assistente-provas-dev"
    - **Data**: Catalog → `workspace.sistema_academico`
    - **Pipeline**: Workflows → Delta Live Tables → "Pipeline Acadêmico"
 
@@ -51,13 +58,15 @@ git clone https://github.com/ffgdeo/ufscar-demo.git
 cd ufscar-demo
 
 # 2. Make sure your Databricks CLI is configured
-#    (profile name must match targets.dev.workspace.profile in databricks.yml)
 databricks auth login --host https://<your-workspace>.cloud.databricks.com
 
 # 3. Validate, deploy, and run
 databricks bundle validate
 databricks bundle deploy --auto-approve
 databricks bundle run setup_job
+
+# 4. Start the chatbot app
+databricks bundle run assistente_provas
 ```
 
 ## Setup job tasks
@@ -79,6 +88,21 @@ gerar_dados ──→ upload_exams ──→ rag_setup
 | `rag_setup` | Parses PDFs, creates Vector Search endpoint + index | ~10 min |
 | `create_genie` | Creates Genie Space with instructions + SQL examples | ~10s |
 
+## Chatbot app
+
+The **Assistente de Provas** is a Gradio chat interface that lets students ask questions about past exams in Portuguese. It uses:
+
+- **Vector Search** to find relevant exam content from 12 PDFs
+- **Llama 3.3 70B** to generate answers grounded in the exam content
+- Shows source PDFs with each answer
+
+Example questions:
+- "Quais tópicos caíram na P1 de Cálculo 1 em 2024?"
+- "A prova de Banco de Dados tem questões sobre normalização?"
+- "Que tipo de exercício aparece na prova de IA?"
+
+> **Note**: The app depends on the Vector Search index created by the `rag_setup` task. Run the setup job before starting the app.
+
 ## Data model
 
 - **800 students** across 8 programs (CS, Engineering, Statistics, Math, Physics, etc.)
@@ -92,7 +116,7 @@ gerar_dados ──→ upload_exams ──→ rag_setup
 databricks bundle destroy --auto-approve
 ```
 
-This removes all deployed resources (jobs, pipeline, dashboard) but does **not** drop the schema or data tables. To fully clean up:
+This removes all deployed resources (jobs, pipeline, dashboard, app) but does **not** drop the schema or data tables. To fully clean up:
 
 ```sql
 DROP SCHEMA workspace.sistema_academico CASCADE;
