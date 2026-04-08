@@ -86,7 +86,7 @@ Se a informação não estiver no contexto, diga que não encontrou dados sobre 
     response = query_llm(prompt)
     source_lines = []
     for s in sources:
-        volume_url = f"{host}/explore/data/volumes/workspace/sistema_academico/staging/files/exams/{s}.pdf"
+        volume_url = f"{host}/explore/data/workspace/sistema_academico/staging/exams/{s}.pdf"
         source_lines.append(f"[📄 {s}]({volume_url})")
     return f"{response}\n\n---\n**Fontes:** {' | '.join(source_lines)}"
 
