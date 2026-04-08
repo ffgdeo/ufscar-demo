@@ -1,0 +1,789 @@
+{
+  "datasets": [
+    {
+      "name": "ds_counters",
+      "displayName": "Indicadores Gerais",
+      "queryLines": [
+        "SELECT (SELECT COUNT(*) FROM workspace.sistema_academico.alunos WHERE status = 'ativo') as total_alunos_ativos, (SELECT ROUND(SUM(CASE WHEN situacao = 'aprovado' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) FROM workspace.sistema_academico.matriculas WHERE situacao != 'trancado') as taxa_aprovacao, (SELECT COUNT(*) FROM workspace.sistema_academico.gold_alunos_em_risco WHERE nivel_risco = 'ALTO') as alunos_risco_alto"
+      ]
+    },
+    {
+      "name": "ds_top_reprovacao",
+      "displayName": "Top Reprovacao",
+      "queryLines": [
+        "SELECT CONCAT(disciplina_codigo, ' - ', disciplina_nome) as disciplina, ROUND(100.0 - AVG(taxa_aprovacao), 1) as taxa_reprovacao FROM workspace.sistema_academico.gold_desempenho_disciplina GROUP BY disciplina_codigo, disciplina_nome ORDER BY taxa_reprovacao DESC LIMIT 10"
+      ]
+    },
+    {
+      "name": "ds_dist_notas",
+      "displayName": "Distribuicao Notas",
+      "queryLines": [
+        "SELECT CAST(FLOOR(nota_final) AS INT) as faixa, COUNT(*) as total FROM workspace.sistema_academico.matriculas WHERE nota_final IS NOT NULL GROUP BY FLOOR(nota_final) ORDER BY faixa"
+      ]
+    },
+    {
+      "name": "ds_evolucao",
+      "displayName": "Evolucao Aprovacao",
+      "queryLines": [
+        "SELECT semestre, ROUND(AVG(taxa_aprovacao), 1) as taxa_aprovacao_media FROM workspace.sistema_academico.gold_desempenho_disciplina GROUP BY semestre ORDER BY semestre"
+      ]
+    },
+    {
+      "name": "ds_risco_dist",
+      "displayName": "Distribuicao Risco",
+      "queryLines": [
+        "SELECT nivel_risco, COUNT(*) as total FROM workspace.sistema_academico.gold_alunos_em_risco GROUP BY nivel_risco"
+      ]
+    },
+    {
+      "name": "ds_risco_top",
+      "displayName": "Top 20 Risco",
+      "queryLines": [
+        "SELECT aluno_nome, curso_sigla, media_atual, freq_atual, total_reprovacoes_historico, score_risco, nivel_risco FROM workspace.sistema_academico.gold_alunos_em_risco ORDER BY score_risco DESC LIMIT 20"
+      ]
+    },
+    {
+      "name": "ds_risco_curso",
+      "displayName": "Risco por Curso",
+      "queryLines": [
+        "SELECT curso_sigla, nivel_risco, COUNT(*) as total FROM workspace.sistema_academico.gold_alunos_em_risco GROUP BY curso_sigla, nivel_risco ORDER BY curso_sigla"
+      ]
+    },
+    {
+      "name": "ds_depto",
+      "displayName": "Aprovacao por Departamento",
+      "queryLines": [
+        "SELECT departamento_sigla, ROUND(AVG(taxa_aprovacao), 1) as taxa_aprovacao_media FROM workspace.sistema_academico.gold_desempenho_disciplina GROUP BY departamento_sigla ORDER BY taxa_aprovacao_media"
+      ]
+    },
+    {
+      "name": "ds_heatmap",
+      "displayName": "Notas Disciplinas Dificeis",
+      "queryLines": [
+        "SELECT CONCAT(disciplina_codigo, ' - ', disciplina_nome) as disciplina, CAST(semestre AS STRING) as semestre, media_nota FROM workspace.sistema_academico.gold_desempenho_disciplina WHERE disciplina_codigo IN (SELECT disciplina_codigo FROM workspace.sistema_academico.gold_desempenho_disciplina GROUP BY disciplina_codigo ORDER BY AVG(taxa_aprovacao) LIMIT 10) ORDER BY disciplina, semestre"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "visao-geral",
+      "displayName": "Visão Geral",
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layout": [
+        {
+          "widget": {
+            "name": "titulo",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Painel Acadêmico — Visão Geral"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "subtitulo",
+            "multilineTextboxSpec": {
+              "lines": [
+                "Indicadores gerais do sistema acadêmico"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "c-alunos",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_counters",
+                  "fields": [
+                    {
+                      "name": "total_alunos_ativos",
+                      "expression": "`total_alunos_ativos`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "total_alunos_ativos",
+                  "displayName": "Alunos Ativos"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Alunos Ativos"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "c-aprovacao",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_counters",
+                  "fields": [
+                    {
+                      "name": "taxa_aprovacao",
+                      "expression": "`taxa_aprovacao`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "taxa_aprovacao",
+                  "displayName": "Aprovação (%)"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Taxa de Aprovação (%)"
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 2,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "c-risco",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_counters",
+                  "fields": [
+                    {
+                      "name": "alunos_risco_alto",
+                      "expression": "`alunos_risco_alto`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "alunos_risco_alto",
+                  "displayName": "Risco Alto"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Alunos em Risco Alto"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 2,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "bar-reprovacao",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_top_reprovacao",
+                  "fields": [
+                    {
+                      "name": "disciplina",
+                      "expression": "`disciplina`"
+                    },
+                    {
+                      "name": "taxa_reprovacao",
+                      "expression": "`taxa_reprovacao`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "disciplina",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Disciplina"
+                },
+                "y": {
+                  "fieldName": "taxa_reprovacao",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Reprovação (%)"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Top 10 Disciplinas com Maior Reprovação"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 5,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "bar-notas",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_dist_notas",
+                  "fields": [
+                    {
+                      "name": "faixa",
+                      "expression": "`faixa`"
+                    },
+                    {
+                      "name": "total",
+                      "expression": "`total`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "faixa",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Nota"
+                },
+                "y": {
+                  "fieldName": "total",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Qtd"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Distribuição de Notas"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 11,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "line-evolucao",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_evolucao",
+                  "fields": [
+                    {
+                      "name": "semestre",
+                      "expression": "`semestre`"
+                    },
+                    {
+                      "name": "taxa_aprovacao_media",
+                      "expression": "`taxa_aprovacao_media`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "semestre",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Semestre"
+                },
+                "y": {
+                  "fieldName": "taxa_aprovacao_media",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Aprovação (%)"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Evolução da Aprovação"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 11,
+            "width": 3,
+            "height": 6
+          }
+        }
+      ]
+    },
+    {
+      "name": "risco",
+      "displayName": "Alunos em Risco",
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layout": [
+        {
+          "widget": {
+            "name": "t-risco",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Alunos em Risco"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "st-risco",
+            "multilineTextboxSpec": {
+              "lines": [
+                "Análise de alunos com risco de reprovação — semestre 2025/1"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "pie-risco",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_risco_dist",
+                  "fields": [
+                    {
+                      "name": "nivel_risco",
+                      "expression": "`nivel_risco`"
+                    },
+                    {
+                      "name": "total",
+                      "expression": "`total`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "pie",
+              "encodings": {
+                "angle": {
+                  "fieldName": "total",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Total"
+                },
+                "color": {
+                  "fieldName": "nivel_risco",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Risco"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Distribuição por Nível de Risco"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "bar-risco-curso",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_risco_curso",
+                  "fields": [
+                    {
+                      "name": "curso_sigla",
+                      "expression": "`curso_sigla`"
+                    },
+                    {
+                      "name": "total",
+                      "expression": "`total`"
+                    },
+                    {
+                      "name": "nivel_risco",
+                      "expression": "`nivel_risco`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "curso_sigla",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Curso"
+                },
+                "y": {
+                  "fieldName": "total",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Alunos"
+                },
+                "color": {
+                  "fieldName": "nivel_risco",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Risco"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Risco por Curso"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 2,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "tbl-risco",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_risco_top",
+                  "fields": [
+                    {
+                      "name": "aluno_nome",
+                      "expression": "`aluno_nome`"
+                    },
+                    {
+                      "name": "curso_sigla",
+                      "expression": "`curso_sigla`"
+                    },
+                    {
+                      "name": "media_atual",
+                      "expression": "`media_atual`"
+                    },
+                    {
+                      "name": "freq_atual",
+                      "expression": "`freq_atual`"
+                    },
+                    {
+                      "name": "total_reprovacoes_historico",
+                      "expression": "`total_reprovacoes_historico`"
+                    },
+                    {
+                      "name": "score_risco",
+                      "expression": "`score_risco`"
+                    },
+                    {
+                      "name": "nivel_risco",
+                      "expression": "`nivel_risco`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "aluno_nome",
+                    "displayName": "Aluno"
+                  },
+                  {
+                    "fieldName": "curso_sigla",
+                    "displayName": "Curso"
+                  },
+                  {
+                    "fieldName": "media_atual",
+                    "displayName": "Média"
+                  },
+                  {
+                    "fieldName": "freq_atual",
+                    "displayName": "Freq %"
+                  },
+                  {
+                    "fieldName": "total_reprovacoes_historico",
+                    "displayName": "Reprov."
+                  },
+                  {
+                    "fieldName": "score_risco",
+                    "displayName": "Score"
+                  },
+                  {
+                    "fieldName": "nivel_risco",
+                    "displayName": "Risco"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Top 20 — Maior Risco"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 8,
+            "width": 6,
+            "height": 7
+          }
+        }
+      ]
+    },
+    {
+      "name": "departamento",
+      "displayName": "Por Departamento",
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layout": [
+        {
+          "widget": {
+            "name": "t-dept",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Análise por Departamento"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "st-dept",
+            "multilineTextboxSpec": {
+              "lines": [
+                "Desempenho acadêmico por departamento e disciplina"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "bar-dept",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_depto",
+                  "fields": [
+                    {
+                      "name": "departamento_sigla",
+                      "expression": "`departamento_sigla`"
+                    },
+                    {
+                      "name": "taxa_aprovacao_media",
+                      "expression": "`taxa_aprovacao_media`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "departamento_sigla",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Departamento"
+                },
+                "y": {
+                  "fieldName": "taxa_aprovacao_media",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Aprovação (%)"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Aprovação por Departamento"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "tbl-heatmap",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_heatmap",
+                  "fields": [
+                    {
+                      "name": "disciplina",
+                      "expression": "`disciplina`"
+                    },
+                    {
+                      "name": "semestre",
+                      "expression": "`semestre`"
+                    },
+                    {
+                      "name": "media_nota",
+                      "expression": "`media_nota`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "disciplina",
+                    "displayName": "Disciplina"
+                  },
+                  {
+                    "fieldName": "semestre",
+                    "displayName": "Semestre"
+                  },
+                  {
+                    "fieldName": "media_nota",
+                    "displayName": "Média"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Notas — Disciplinas Mais Difíceis"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 8,
+            "width": 6,
+            "height": 7
+          }
+        }
+      ]
+    }
+  ]
+}

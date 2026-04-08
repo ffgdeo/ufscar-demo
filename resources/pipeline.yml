@@ -1,0 +1,14 @@
+resources:
+  pipelines:
+    pipeline_academico:
+      name: "[${bundle.target}] Pipeline Acadêmico (Medallion)"
+      catalog: ${var.catalog}
+      target: ${var.schema}
+      libraries:
+        - notebook:
+            path: ../src/pipeline/transformations.py
+      serverless: true
+      continuous: false
+      development: true
+      photon: true
+      channel: current

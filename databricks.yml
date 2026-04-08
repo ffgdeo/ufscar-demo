@@ -1,0 +1,21 @@
+bundle:
+  name: ufscar-demo
+
+include:
+  - resources/*.yml
+
+variables:
+  catalog:
+    default: "workspace"
+  schema:
+    default: "sistema_academico"
+  warehouse_id:
+    lookup:
+      warehouse: "Serverless Starter Warehouse"
+
+targets:
+  dev:
+    default: true
+    mode: development
+    workspace:
+      profile: ufscar-demo
