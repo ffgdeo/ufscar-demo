@@ -8,21 +8,19 @@ from databricks.sdk import WorkspaceClient
 w = WorkspaceClient()
 host = w.config.host.rstrip("/")
 
+VOLUME_PATH = "/Volumes/workspace/sistema_academico/staging/exams"
+VS_INDEX = "workspace.sistema_academico.exam_chunks_vs_index"
+LLM_ENDPOINT = "databricks-meta-llama-3-3-70b-instruct"
+
 
 def get_headers():
     """Get fresh auth headers."""
     try:
-        # Try SDK header factory (works in app context)
         h = w.config._header_factory()
         return {"Authorization": h.get("Authorization", ""), "Content-Type": "application/json"}
     except Exception:
-        # Fallback: use token directly
         token = getattr(w.config, 'token', None) or os.environ.get("DATABRICKS_TOKEN", "")
         return {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-
-
-VS_INDEX = "workspace.sistema_academico.exam_chunks_vs_index"
-LLM_ENDPOINT = "databricks-meta-llama-3-3-70b-instruct"
 
 
 def search_exams(query: str, n: int = 3) -> tuple:
@@ -39,6 +37,22 @@ def search_exams(query: str, n: int = 3) -> tuple:
         return r.json().get("result", {}).get("data_array", []), None
     except Exception as e:
         return [], str(e)
+
+
+def download_pdf(filename: str) -> str:
+    """Download a PDF from the volume to a temp file and return the path."""
+    try:
+        headers = get_headers()
+        volume_file = f"{VOLUME_PATH}/{filename}.pdf"
+        r = requests.get(f"{host}/api/2.0/fs/files{volume_file}", headers=headers)
+        if r.status_code == 200:
+            tmp_path = f"/tmp/{filename}.pdf"
+            with open(tmp_path, "wb") as f:
+                f.write(r.content)
+            return tmp_path
+    except Exception:
+        pass
+    return None
 
 
 def query_llm(prompt: str) -> str:
@@ -63,17 +77,17 @@ def query_llm(prompt: str) -> str:
         return f"Erro: {e}"
 
 
-def chat(message: str, history: list) -> str:
-    """RAG: search exams → build context → ask LLM."""
+def chat(message: str, history: list) -> tuple:
+    """RAG: search exams → build context → ask LLM. Returns (response, files)."""
     results, error = search_exams(message)
 
     if error:
-        return f"⚠️ Erro na busca: {error}"
+        return f"⚠️ Erro na busca: {error}", []
 
     if not results:
-        return "Não encontrei provas relevantes para essa pergunta. Tente perguntar sobre uma disciplina específica (ex: Cálculo 1, Banco de Dados, Algoritmos)."
+        return "Não encontrei provas relevantes para essa pergunta. Tente perguntar sobre uma disciplina específica (ex: Cálculo 1, Banco de Dados, Algoritmos).", []
 
-    # Build context from search results
+    # Build context and collect source filenames
     context_parts = []
     sources = []
     for r in results:
@@ -96,27 +110,85 @@ Se a informação não estiver no contexto, diga que não encontrou dados sobre 
 ## Resposta:"""
 
     response = query_llm(prompt)
-    source_text = ", ".join(sources)
-    return f"{response}\n\n---\n📄 *Fontes: {source_text}*"
 
+    # Build source links
+    source_lines = []
+    for s in sources:
+        source_lines.append(f"- 📄 {s}")
+    source_text = "\n".join(source_lines)
+
+    full_response = f"{response}\n\n---\n**Fontes utilizadas:**\n{source_text}"
+
+    # Download PDFs for the file viewer
+    pdf_files = []
+    for s in sources:
+        path = download_pdf(s)
+        if path:
+            pdf_files.append(path)
+
+    return full_response, pdf_files
+
+
+# Custom CSS for bigger chat area
+CSS = """
+.chatbot-container .chatbot {
+    min-height: 500px !important;
+    max-height: 700px !important;
+}
+#chatbot {
+    min-height: 500px !important;
+    max-height: 700px !important;
+}
+.message {
+    max-height: none !important;
+}
+"""
 
 # Gradio UI
 with gr.Blocks(
     title="Assistente de Provas — UFSCar",
     theme=gr.themes.Soft(),
+    css=CSS,
 ) as app:
     gr.Markdown(
         """
         # 📚 Assistente de Provas Anteriores
-        ### Universidade Federal de São Carlos — UFSCar
+        **Universidade Federal de São Carlos — UFSCar**
 
         Pergunte sobre provas anteriores de qualquer disciplina.
         O sistema busca nos PDFs das provas e responde com base no conteúdo real.
         """
     )
 
-    chatbot = gr.ChatInterface(
-        fn=chat,
+    with gr.Row():
+        with gr.Column(scale=3):
+            chatbot = gr.Chatbot(
+                label="Chat",
+                height=500,
+                show_copy_button=True,
+                render_markdown=True,
+            )
+            msg = gr.Textbox(
+                placeholder="Pergunte sobre provas anteriores...",
+                label="Sua pergunta",
+                lines=1,
+                scale=4,
+            )
+            with gr.Row():
+                submit_btn = gr.Button("Enviar", variant="primary", scale=2)
+                clear_btn = gr.Button("Limpar", scale=1)
+
+        with gr.Column(scale=1):
+            gr.Markdown("### 📎 PDFs das Fontes")
+            pdf_viewer = gr.File(
+                label="Provas utilizadas na resposta",
+                file_count="multiple",
+                interactive=False,
+                height=200,
+            )
+
+    gr.Markdown("### Exemplos de perguntas")
+    examples = gr.Examples(
         examples=[
             "Quais tópicos caíram na P1 de Cálculo 1 em 2024?",
             "A prova de Banco de Dados tem questões sobre normalização?",
@@ -124,8 +196,16 @@ with gr.Blocks(
             "Quais assuntos caíram na prova de Probabilidade e Estatística?",
             "A P2 de Algoritmos teve questões sobre grafos?",
         ],
-        retry_btn=None,
-        undo_btn=None,
+        inputs=msg,
     )
+
+    def respond(message, chat_history):
+        response, files = chat(message, chat_history)
+        chat_history = chat_history + [[message, response]]
+        return "", chat_history, files
+
+    msg.submit(respond, [msg, chatbot], [msg, chatbot, pdf_viewer])
+    submit_btn.click(respond, [msg, chatbot], [msg, chatbot, pdf_viewer])
+    clear_btn.click(lambda: ([], None), outputs=[chatbot, pdf_viewer])
 
 app.launch()
