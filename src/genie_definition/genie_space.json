@@ -35,7 +35,7 @@
       {
         "id": "b63a1f00c6f2422c99d429fdb2c26e3b",
         "question": [
-          "Quantos alunos estão em risco alto no semestre 2025/1?"
+          "Quantos alunos estão em risco alto no semestre 2026/1?"
         ]
       },
       {
@@ -105,7 +105,7 @@
           "Distribuição de alunos por curso no semestre atual"
         ],
         "sql": [
-          "SELECT curso_sigla, curso_nome, COUNT(DISTINCT aluno_id) as total FROM workspace.sistema_academico.gold_desempenho_aluno WHERE semestre = '2025/1' GROUP BY curso_sigla, curso_nome ORDER BY total DESC"
+          "SELECT curso_sigla, curso_nome, COUNT(DISTINCT aluno_id) as total FROM workspace.sistema_academico.gold_desempenho_aluno WHERE semestre = '2026/1' GROUP BY curso_sigla, curso_nome ORDER BY total DESC"
         ]
       }
     ]
@@ -127,7 +127,7 @@
       {
         "identifier": "workspace.sistema_academico.gold_alunos_em_risco",
         "description": [
-          "Alunos em risco semestre 2025/1. nivel_risco: ALTO/MÉDIO/BAIXO. score_risco 0-100. Já tem aluno_nome, curso_sigla, media_atual, freq_atual."
+          "Alunos em risco semestre 2026/1. nivel_risco: ALTO/MÉDIO/BAIXO. score_risco 0-100. Já tem aluno_nome, curso_sigla, media_atual, freq_atual."
         ]
       },
       {

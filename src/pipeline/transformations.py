@@ -1,36 +1,49 @@
 # Databricks notebook source
 
 # MAGIC %md
-# MAGIC # Pipeline Acadêmico — Spark Declarative Pipeline
-# MAGIC Bronze → Silver → Gold
+# MAGIC # Pipeline Academico — Spark Declarative Pipeline
+# MAGIC Bronze (CSVs) → Silver → Gold
 
 # COMMAND ----------
 
-import dlt
+from pyspark import pipelines as dp
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
 
 CATALOG = "workspace"
 SCHEMA = "sistema_academico"
+CSV_BASE = f"/Volumes/{CATALOG}/{SCHEMA}/staging/csvs"
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Bronze
+# MAGIC ## Bronze — leitura de CSVs do Volume
 
 # COMMAND ----------
 
-@dlt.table(name="bronze_matriculas", comment="Dados brutos de matrículas.")
+@dp.table(name="bronze_matriculas", comment="Dados brutos de matriculas lidos de CSV.")
 def bronze_matriculas():
-    return spark.table(f"{CATALOG}.{SCHEMA}.matriculas")
+    return spark.read.format("csv").option("header", True).option("inferSchema", True).load(f"{CSV_BASE}/matriculas.csv")
 
-@dlt.table(name="bronze_alunos", comment="Cadastro de alunos.")
+@dp.table(name="bronze_alunos", comment="Cadastro de alunos lido de CSV.")
 def bronze_alunos():
-    return spark.table(f"{CATALOG}.{SCHEMA}.alunos")
+    return spark.read.format("csv").option("header", True).option("inferSchema", True).load(f"{CSV_BASE}/alunos.csv")
 
-@dlt.table(name="bronze_disciplinas", comment="Catálogo de disciplinas.")
+@dp.table(name="bronze_disciplinas", comment="Catalogo de disciplinas lido de CSV.")
 def bronze_disciplinas():
-    return spark.table(f"{CATALOG}.{SCHEMA}.disciplinas")
+    return spark.read.format("csv").option("header", True).option("inferSchema", True).load(f"{CSV_BASE}/disciplinas.csv")
+
+@dp.table(name="bronze_departamentos", comment="Departamentos academicos lidos de CSV.")
+def bronze_departamentos():
+    return spark.read.format("csv").option("header", True).option("inferSchema", True).load(f"{CSV_BASE}/departamentos.csv")
+
+@dp.table(name="bronze_cursos", comment="Cursos de graduacao lidos de CSV.")
+def bronze_cursos():
+    return spark.read.format("csv").option("header", True).option("inferSchema", True).load(f"{CSV_BASE}/cursos.csv")
+
+@dp.table(name="bronze_professores", comment="Corpo docente lido de CSV.")
+def bronze_professores():
+    return spark.read.format("csv").option("header", True).option("inferSchema", True).load(f"{CSV_BASE}/professores.csv")
 
 # COMMAND ----------
 
@@ -39,18 +52,18 @@ def bronze_disciplinas():
 
 # COMMAND ----------
 
-@dlt.table(name="silver_matriculas", comment="Matrículas enriquecidas com nomes de alunos, disciplinas, cursos e departamentos.")
-@dlt.expect("nota_p1_valida", "nota_p1 IS NULL OR (nota_p1 >= 0 AND nota_p1 <= 10)")
-@dlt.expect("nota_p2_valida", "nota_p2 IS NULL OR (nota_p2 >= 0 AND nota_p2 <= 10)")
-@dlt.expect("frequencia_valida", "frequencia_pct IS NULL OR (frequencia_pct >= 0 AND frequencia_pct <= 100)")
-@dlt.expect_or_drop("situacao_conhecida", "situacao IN ('aprovado','reprovado_nota','reprovado_frequencia','reprovado_nota_freq','trancado')")
+@dp.table(name="silver_matriculas", comment="Matriculas enriquecidas com nomes de alunos, disciplinas, cursos e departamentos.")
+@dp.expect("nota_p1_valida", "nota_p1 IS NULL OR (nota_p1 >= 0 AND nota_p1 <= 10)")
+@dp.expect("nota_p2_valida", "nota_p2 IS NULL OR (nota_p2 >= 0 AND nota_p2 <= 10)")
+@dp.expect("frequencia_valida", "frequencia_pct IS NULL OR (frequencia_pct >= 0 AND frequencia_pct <= 100)")
+@dp.expect_or_drop("situacao_conhecida", "situacao IN ('aprovado','reprovado_nota','reprovado_frequencia','reprovado_nota_freq','trancado')")
 def silver_matriculas():
-    m = dlt.read("bronze_matriculas")
-    a = dlt.read("bronze_alunos")
-    d = dlt.read("bronze_disciplinas")
-    c = spark.table(f"{CATALOG}.{SCHEMA}.cursos")
-    dep = spark.table(f"{CATALOG}.{SCHEMA}.departamentos")
-    p = spark.table(f"{CATALOG}.{SCHEMA}.professores")
+    m = spark.read.table("bronze_matriculas")
+    a = spark.read.table("bronze_alunos")
+    d = spark.read.table("bronze_disciplinas")
+    c = spark.read.table("bronze_cursos")
+    dep = spark.read.table("bronze_departamentos")
+    p = spark.read.table("bronze_professores")
     return (
         m.join(a, "aluno_id").join(d, "disciplina_id")
         .join(c, a["curso_id"] == c["curso_id"])
@@ -77,11 +90,11 @@ def silver_matriculas():
 
 # COMMAND ----------
 
-@dlt.table(name="gold_desempenho_aluno", comment="Performance por aluno/semestre com CRA acumulado.")
+@dp.table(name="gold_desempenho_aluno", comment="Performance por aluno/semestre com CRA acumulado.")
 def gold_desempenho_aluno():
     w = Window.partitionBy("aluno_id").orderBy("semestre").rowsBetween(Window.unboundedPreceding, Window.currentRow)
     return (
-        dlt.read("silver_matriculas").filter(F.col("situacao") != "trancado")
+        spark.read.table("silver_matriculas").filter(F.col("situacao") != "trancado")
         .groupBy("aluno_id","aluno_nome","curso_sigla","curso_nome","ano_ingresso","semestre")
         .agg(
             F.count("*").alias("disciplinas_cursadas"),
@@ -93,10 +106,10 @@ def gold_desempenho_aluno():
         .withColumn("cra_acumulado", F.round(F.avg("media_semestre").over(w), 2))
     )
 
-@dlt.table(name="gold_desempenho_disciplina", comment="Métricas por disciplina e semestre.")
+@dp.table(name="gold_desempenho_disciplina", comment="Metricas por disciplina e semestre.")
 def gold_desempenho_disciplina():
     return (
-        dlt.read("silver_matriculas").filter(F.col("situacao") != "trancado")
+        spark.read.table("silver_matriculas").filter(F.col("situacao") != "trancado")
         .groupBy("disciplina_id","disciplina_codigo","disciplina_nome","departamento_sigla","dificuldade","creditos","semestre")
         .agg(
             F.count("*").alias("total_alunos"),
@@ -109,11 +122,11 @@ def gold_desempenho_disciplina():
         )
     )
 
-@dlt.table(name="gold_alunos_em_risco", comment="Alunos ativos em risco no semestre 2025/1. Nível: ALTO (>=40), MÉDIO (>=20), BAIXO (<20).")
+@dp.table(name="gold_alunos_em_risco", comment="Alunos ativos em risco no semestre 2026/1. Nivel: ALTO (>=40), MEDIO (>=20), BAIXO (<20).")
 def gold_alunos_em_risco():
     us = (
-        dlt.read("silver_matriculas")
-        .filter((F.col("semestre")=="2025/1") & (F.col("situacao")!="trancado"))
+        spark.read.table("silver_matriculas")
+        .filter((F.col("semestre")=="2026/1") & (F.col("situacao")!="trancado"))
         .groupBy("aluno_id").agg(
             F.round(F.avg("nota_final"),2).alias("media_atual"),
             F.round(F.avg("frequencia_pct"),1).alias("freq_atual"),
@@ -123,14 +136,14 @@ def gold_alunos_em_risco():
         )
     )
     hist = (
-        dlt.read("silver_matriculas")
-        .filter((F.col("semestre")!="2025/1") & (F.col("situacao")!="trancado"))
+        spark.read.table("silver_matriculas")
+        .filter((F.col("semestre")!="2026/1") & (F.col("situacao")!="trancado"))
         .groupBy("aluno_id").agg(
             F.round(F.avg("nota_final"),2).alias("cra_historico"),
             F.sum(F.when(F.col("reprovado"),1).otherwise(0)).alias("total_reprovacoes"),
         )
     )
-    a = dlt.read("bronze_alunos").filter(F.col("status")=="ativo")
+    a = spark.read.table("bronze_alunos").filter(F.col("status")=="ativo")
     c = spark.table(f"{CATALOG}.{SCHEMA}.cursos")
     joined = us.join(a,"aluno_id").join(c,a["curso_id"]==c["curso_id"]).join(hist,"aluno_id","left")
     return (
@@ -148,5 +161,5 @@ def gold_alunos_em_risco():
             )),0).alias("score_risco"),
         )
         .withColumn("nivel_risco",
-            F.when(F.col("score_risco")>=40,"ALTO").when(F.col("score_risco")>=20,"MÉDIO").otherwise("BAIXO"))
+            F.when(F.col("score_risco")>=40,"ALTO").when(F.col("score_risco")>=20,"MEDIO").otherwise("BAIXO"))
     )

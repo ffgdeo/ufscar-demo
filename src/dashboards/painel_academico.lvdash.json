@@ -4,7 +4,7 @@
       "name": "ds_counters",
       "displayName": "Indicadores Gerais",
       "queryLines": [
-        "SELECT   (SELECT COUNT(*) FROM workspace.sistema_academico.alunos WHERE status = 'ativo') as total_alunos_ativos,   (SELECT COUNT(DISTINCT aluno_id) FROM workspace.sistema_academico.matriculas WHERE semestre = '2025/1' AND situacao != 'trancado') as alunos_cursando,   (SELECT ROUND(SUM(CASE WHEN situacao = 'aprovado' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) FROM workspace.sistema_academico.matriculas WHERE situacao != 'trancado') as taxa_aprovacao,   (SELECT ROUND(AVG(nota_final), 2) FROM workspace.sistema_academico.matriculas WHERE situacao != 'trancado') as media_geral,   (SELECT COUNT(*) FROM workspace.sistema_academico.gold_alunos_em_risco WHERE nivel_risco = 'ALTO') as alunos_risco_alto,   (SELECT COUNT(*) FROM workspace.sistema_academico.gold_alunos_em_risco WHERE nivel_risco = 'MÉDIO') as alunos_risco_medio "
+        "SELECT   (SELECT COUNT(*) FROM workspace.sistema_academico.alunos WHERE status = 'ativo') as total_alunos_ativos,   (SELECT COUNT(DISTINCT aluno_id) FROM workspace.sistema_academico.matriculas WHERE semestre = '2026/1' AND situacao != 'trancado') as alunos_cursando,   (SELECT ROUND(SUM(CASE WHEN situacao = 'aprovado' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) FROM workspace.sistema_academico.matriculas WHERE situacao != 'trancado') as taxa_aprovacao,   (SELECT ROUND(AVG(nota_final), 2) FROM workspace.sistema_academico.matriculas WHERE situacao != 'trancado') as media_geral,   (SELECT COUNT(*) FROM workspace.sistema_academico.gold_alunos_em_risco WHERE nivel_risco = 'ALTO') as alunos_risco_alto,   (SELECT COUNT(*) FROM workspace.sistema_academico.gold_alunos_em_risco WHERE nivel_risco = 'MÉDIO') as alunos_risco_medio "
       ]
     },
     {
@@ -192,12 +192,12 @@
               "encodings": {
                 "value": {
                   "fieldName": "alunos_cursando",
-                  "displayName": "Cursando 2025/1"
+                  "displayName": "Cursando 2026/1"
                 }
               },
               "frame": {
                 "showTitle": true,
-                "title": "Cursando 2025/1"
+                "title": "Cursando 2026/1"
               }
             }
           },
@@ -630,7 +630,7 @@
             "name": "t-risco",
             "multilineTextboxSpec": {
               "lines": [
-                "## Alunos em Risco — Semestre 2025/1"
+                "## Alunos em Risco — Semestre 2026/1"
               ]
             }
           },

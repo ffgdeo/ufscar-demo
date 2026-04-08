@@ -4,35 +4,28 @@ resources:
       name: "[${bundle.target}] UFSCar Demo — Setup"
       tasks:
         - task_key: "gerar_dados"
-          description: "Gera dados sintéticos e cria tabelas base"
+          description: "Gera dados sinteticos, grava CSVs no Volume, cria tabelas de referencia e faz upload dos PDFs"
           notebook_task:
             notebook_path: ../src/notebooks/01_gerar_dados.py
 
-        - task_key: "upload_exams"
-          description: "Faz upload dos PDFs de provas para o Volume"
-          depends_on:
-            - task_key: "gerar_dados"
-          notebook_task:
-            notebook_path: ../src/notebooks/02_upload_exams.py
-
         - task_key: "run_pipeline"
-          description: "Executa o pipeline Medallion (Bronze → Silver → Gold)"
+          description: "Executa o pipeline Medallion (Bronze CSVs → Silver → Gold)"
           depends_on:
             - task_key: "gerar_dados"
           pipeline_task:
             pipeline_id: ${resources.pipelines.pipeline_academico.id}
 
         - task_key: "ml_training"
-          description: "Treina modelo de predição de alunos em risco"
+          description: "Treina modelo de predicao de alunos em risco com Feature Engineering"
           depends_on:
             - task_key: "run_pipeline"
           notebook_task:
             notebook_path: ../src/notebooks/03_ml_alunos_em_risco.py
 
         - task_key: "rag_setup"
-          description: "Configura busca semântica sobre provas (Vector Search)"
+          description: "Configura busca semantica sobre provas (Vector Search)"
           depends_on:
-            - task_key: "upload_exams"
+            - task_key: "gerar_dados"
           notebook_task:
             notebook_path: ../src/notebooks/04_rag_provas.py
 
