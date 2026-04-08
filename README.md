@@ -27,21 +27,15 @@ End-to-end data intelligence demo for university grading analytics, built on Dat
    - Update the `profile` under `targets.dev` to match your `~/.databrickscfg` profile name
    - If your warehouse has a different name, update the `warehouse_id` lookup
 
-3. **Deploy from the terminal**
-   - Open a notebook or the Web Terminal in your workspace
-   - Navigate to the cloned folder:
-     ```bash
-     cd /Workspace/Users/<your-email>/ufscar-demo
-     ```
-   - Deploy and run:
-     ```bash
-     databricks bundle deploy --auto-approve
-     databricks bundle run setup_job
-     ```
+3. **Deploy the bundle**
+   - Open `databricks.yml` in the workspace file browser
+   - Click the **🚀 Deploy** button (rocket icon) in the top-right corner
+   - Select the **dev** target and confirm
 
-4. **Wait for the setup job to complete** (~10–15 min)
-   - Track progress in **Workflows → Jobs → "[dev] UFSCar Demo — Setup"**
-   - The job creates all tables, runs the pipeline, trains the ML model, sets up RAG, and creates the Genie Space
+4. **Run the setup job**
+   - After deployment completes, go to **Workflows → Jobs**
+   - Find **"[dev] UFSCar Demo — Setup"** and click **Run Now**
+   - Wait ~10–15 min for all tasks to complete (data generation, pipeline, ML, RAG, Genie)
 
 5. **Explore the results**
    - **Dashboard**: Workspace → search "Painel Acadêmico"
