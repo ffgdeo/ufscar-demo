@@ -18,4 +18,4 @@ targets:
     default: true
     mode: development
     workspace:
-      profile: ufscar-demo
+      host: https://dbc-ccdb45f8-91e4.cloud.databricks.com
