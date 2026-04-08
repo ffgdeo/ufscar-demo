@@ -10,7 +10,6 @@ host = w.config.host.rstrip("/")
 
 VS_INDEX = "workspace.sistema_academico.exam_chunks_vs_index"
 LLM_ENDPOINT = "databricks-meta-llama-3-3-70b-instruct"
-VOLUME_PATH = "/Volumes/workspace/sistema_academico/staging/exams"
 
 
 def get_headers():
@@ -56,31 +55,14 @@ def query_llm(prompt):
         return f"Erro: {e}"
 
 
-def download_pdf(filename):
-    """Download PDF from volume, return local path or None."""
-    try:
-        volume_file = f"{VOLUME_PATH}/{filename}.pdf"
-        r = requests.get(f"{host}/api/2.0/fs/files{volume_file}", headers=get_headers())
-        if r.status_code == 200:
-            tmp = f"/tmp/{filename}.pdf"
-            with open(tmp, "wb") as f:
-                f.write(r.content)
-            return tmp
-    except Exception:
-        pass
-    return None
-
-
-def respond(message, history):
+def chat(message, history):
     results, error = search_exams(message)
 
     if error:
-        history.append([message, f"⚠️ Erro na busca: {error}"])
-        return history, []
+        return f"⚠️ Erro na busca: {error}"
 
     if not results:
-        history.append([message, "Não encontrei provas relevantes. Tente perguntar sobre uma disciplina específica (ex: Cálculo 1, Banco de Dados, Algoritmos)."])
-        return history, []
+        return "Não encontrei provas relevantes. Tente perguntar sobre uma disciplina específica (ex: Cálculo 1, Banco de Dados, Algoritmos)."
 
     context_parts, sources = [], []
     for r in results:
@@ -102,52 +84,28 @@ Se a informação não estiver no contexto, diga que não encontrou dados sobre 
 ## Resposta:"""
 
     response = query_llm(prompt)
-    source_lines = "\n".join([f"- 📄 **{s}**" for s in sources])
-    full = f"{response}\n\n---\n**Fontes:**\n{source_lines}"
-
-    # Try to download source PDFs
-    files = []
+    source_lines = []
     for s in sources:
-        path = download_pdf(s)
-        if path:
-            files.append(path)
-
-    history.append([message, full])
-    return history, files
+        volume_url = f"{host}/explore/data/volumes/workspace/sistema_academico/staging/files/exams/{s}.pdf"
+        source_lines.append(f"[📄 {s}]({volume_url})")
+    return f"{response}\n\n---\n**Fontes:** {' | '.join(source_lines)}"
 
 
-with gr.Blocks(
-    title="Assistente de Provas — UFSCar",
-    theme=gr.themes.Soft(),
-    css="#chatbot { height: 500px !important; }",
-) as app:
-    gr.Markdown(
-        "# 📚 Assistente de Provas Anteriores\n"
-        "**Universidade Federal de São Carlos — UFSCar**\n\n"
-        "Pergunte sobre provas anteriores de qualquer disciplina."
-    )
-
-    with gr.Row():
-        with gr.Column(scale=3):
-            chatbot = gr.Chatbot(elem_id="chatbot", show_copy_button=True, render_markdown=True)
-            msg = gr.Textbox(placeholder="Pergunte sobre provas anteriores...", label="Sua pergunta", lines=1)
-            with gr.Row():
-                submit_btn = gr.Button("Enviar", variant="primary", scale=2)
-                clear_btn = gr.Button("Limpar", scale=1)
-        with gr.Column(scale=1):
-            gr.Markdown("### 📎 Fontes (PDFs)")
-            files_output = gr.File(label="Provas utilizadas", file_count="multiple", interactive=False)
-
-    gr.Examples(examples=[
+demo = gr.ChatInterface(
+    fn=chat,
+    title="📚 Assistente de Provas Anteriores — UFSCar",
+    description="Pergunte sobre provas anteriores de qualquer disciplina. O sistema busca nos PDFs e responde com base no conteúdo real.",
+    examples=[
         "Quais tópicos caíram na P1 de Cálculo 1 em 2024?",
         "A prova de Banco de Dados tem questões sobre normalização?",
         "Que tipo de exercício aparece na prova de Inteligência Artificial?",
         "Quais assuntos caíram na prova de Probabilidade e Estatística?",
         "A P2 de Algoritmos teve questões sobre grafos?",
-    ], inputs=msg)
+    ],
+    chatbot=gr.Chatbot(height=500),
+    retry_btn=None,
+    undo_btn=None,
+    theme=gr.themes.Soft(),
+)
 
-    msg.submit(respond, [msg, chatbot], [chatbot, files_output]).then(lambda: "", outputs=msg)
-    submit_btn.click(respond, [msg, chatbot], [chatbot, files_output]).then(lambda: "", outputs=msg)
-    clear_btn.click(lambda: ([], None), outputs=[chatbot, files_output])
-
-app.launch()
+demo.launch()
