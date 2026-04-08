@@ -38,10 +38,12 @@ End-to-end data intelligence demo for university grading analytics, built on Dat
    - Find **"[dev] UFSCar Demo — Setup"** and click **Run Now**
    - Wait ~10–15 min for all tasks to complete (data generation, pipeline, ML, RAG, Genie)
 
-5. **Start the chatbot app**
-   - Go to **Apps** in the sidebar
-   - Find **assistente-provas-dev** and click **Start**
-   - Once running, open the app URL to chat with the exam assistant
+5. **Deploy and start the chatbot app**
+   - Apps require a separate deploy step. From the workspace terminal:
+     ```bash
+     databricks bundle run assistente_provas -t dev
+     ```
+   - Once running, open the app URL shown in the output
 
 6. **Explore the results**
    - **Dashboard**: Workspace → search "Painel Acadêmico"
