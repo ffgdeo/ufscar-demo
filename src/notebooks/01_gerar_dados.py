@@ -237,51 +237,25 @@ from databricks.sdk import WorkspaceClient
 w = WorkspaceClient()
 CSV_BASE = "/Volumes/workspace/sistema_academico/staging/csvs"
 
-def upload_csv(path, header, rows):
-    """Escreve CSV em /tmp e faz upload para o Volume."""
-    local = f"/tmp/{os.path.basename(path)}"
+def upload_csv(table_name, header, rows):
+    """Escreve CSV em /tmp e faz upload para o Volume (em diretorio para Auto Loader)."""
+    local = f"/tmp/{table_name}.csv"
     with open(local, "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(header)
         writer.writerows(rows)
+    target = f"{CSV_BASE}/{table_name}/{table_name}.csv"
     with open(local, "rb") as f:
-        w.files.upload(path, f, overwrite=True)
-    print(f"  {path} ({len(rows)} rows)")
+        w.files.upload(target, f, overwrite=True)
+    print(f"  {target} ({len(rows)} rows)")
 
-# departamentos
-upload_csv(f"{CSV_BASE}/departamentos.csv",
-    ["departamento_id","sigla","nome"],
-    departamentos)
-
-# cursos
-upload_csv(f"{CSV_BASE}/cursos.csv",
-    ["curso_id","sigla","nome","departamento_id","duracao_semestres"],
-    cursos)
-
-# professores
-upload_csv(f"{CSV_BASE}/professores.csv",
-    ["professor_id","nome","departamento_id","titulacao"],
-    professores)
-
-# disciplinas
-upload_csv(f"{CSV_BASE}/disciplinas.csv",
-    ["disciplina_id","codigo","nome","departamento_id","creditos","semestre_recomendado","dificuldade"],
-    disciplinas)
-
-# grade_curricular
-upload_csv(f"{CSV_BASE}/grade_curricular.csv",
-    ["curso_id","disciplina_id"],
-    gc_rows)
-
-# alunos
-upload_csv(f"{CSV_BASE}/alunos.csv",
-    ["aluno_id","nome","curso_id","ano_ingresso","status"],
-    alunos)
-
-# matriculas
-upload_csv(f"{CSV_BASE}/matriculas.csv",
-    ["matricula_id","aluno_id","disciplina_id","professor_id","semestre","nota_p1","nota_p2","nota_final","frequencia_pct","situacao"],
-    matriculas)
+upload_csv("departamentos", ["departamento_id","sigla","nome"], departamentos)
+upload_csv("cursos", ["curso_id","sigla","nome","departamento_id","duracao_semestres"], cursos)
+upload_csv("professores", ["professor_id","nome","departamento_id","titulacao"], professores)
+upload_csv("disciplinas", ["disciplina_id","codigo","nome","departamento_id","creditos","semestre_recomendado","dificuldade"], disciplinas)
+upload_csv("grade_curricular", ["curso_id","disciplina_id"], gc_rows)
+upload_csv("alunos", ["aluno_id","nome","curso_id","ano_ingresso","status"], alunos)
+upload_csv("matriculas", ["matricula_id","aluno_id","disciplina_id","professor_id","semestre","nota_p1","nota_p2","nota_final","frequencia_pct","situacao"], matriculas)
 
 print("CSVs gravados no Volume.")
 

@@ -99,6 +99,22 @@ training_set = fe.create_training_set(
 )
 
 df = training_set.load_df().toPandas()
+
+# Convert Decimal columns to float (avoids JSON serialization errors in MLflow)
+for col in df.select_dtypes(include=["object"]).columns:
+    try:
+        df[col] = df[col].astype(float)
+    except (ValueError, TypeError):
+        pass
+for col in df.columns:
+    if df[col].dtype == object or str(df[col].dtype) == "object":
+        continue
+    df[col] = df[col].astype(float) if "decimal" in str(df[col].dtype).lower() else df[col]
+
+# Force all numeric columns to native Python types
+numeric_cols = df.select_dtypes(include=["number"]).columns
+df[numeric_cols] = df[numeric_cols].apply(pd.to_numeric, errors="coerce")
+
 print(f"Dataset: {len(df)} rows, {df['reprovado'].mean():.1%} fail rate")
 
 # COMMAND ----------

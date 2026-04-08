@@ -17,33 +17,77 @@ CSV_BASE = f"/Volumes/{CATALOG}/{SCHEMA}/staging/csvs"
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Bronze — leitura de CSVs do Volume
+# MAGIC ## Bronze — ingestao de CSVs via Auto Loader (streaming tables)
 
 # COMMAND ----------
 
-@dp.table(name="bronze_matriculas", comment="Dados brutos de matriculas lidos de CSV.")
+SCHEMA_BASE = f"/Volumes/{CATALOG}/{SCHEMA}/staging/_schemas"
+
+@dp.table(name="bronze_matriculas", comment="Dados brutos de matriculas ingeridos via Auto Loader.")
 def bronze_matriculas():
-    return spark.read.format("csv").option("header", True).option("inferSchema", True).load(f"{CSV_BASE}/matriculas.csv")
+    return (
+        spark.readStream.format("cloudFiles")
+        .option("cloudFiles.format", "csv")
+        .option("cloudFiles.schemaLocation", f"{SCHEMA_BASE}/bronze_matriculas")
+        .option("header", True)
+        .option("inferSchema", True)
+        .load(f"{CSV_BASE}/matriculas")
+    )
 
-@dp.table(name="bronze_alunos", comment="Cadastro de alunos lido de CSV.")
+@dp.table(name="bronze_alunos", comment="Cadastro de alunos ingerido via Auto Loader.")
 def bronze_alunos():
-    return spark.read.format("csv").option("header", True).option("inferSchema", True).load(f"{CSV_BASE}/alunos.csv")
+    return (
+        spark.readStream.format("cloudFiles")
+        .option("cloudFiles.format", "csv")
+        .option("cloudFiles.schemaLocation", f"{SCHEMA_BASE}/bronze_alunos")
+        .option("header", True)
+        .option("inferSchema", True)
+        .load(f"{CSV_BASE}/alunos")
+    )
 
-@dp.table(name="bronze_disciplinas", comment="Catalogo de disciplinas lido de CSV.")
+@dp.table(name="bronze_disciplinas", comment="Catalogo de disciplinas ingerido via Auto Loader.")
 def bronze_disciplinas():
-    return spark.read.format("csv").option("header", True).option("inferSchema", True).load(f"{CSV_BASE}/disciplinas.csv")
+    return (
+        spark.readStream.format("cloudFiles")
+        .option("cloudFiles.format", "csv")
+        .option("cloudFiles.schemaLocation", f"{SCHEMA_BASE}/bronze_disciplinas")
+        .option("header", True)
+        .option("inferSchema", True)
+        .load(f"{CSV_BASE}/disciplinas")
+    )
 
-@dp.table(name="bronze_departamentos", comment="Departamentos academicos lidos de CSV.")
+@dp.table(name="bronze_departamentos", comment="Departamentos academicos ingeridos via Auto Loader.")
 def bronze_departamentos():
-    return spark.read.format("csv").option("header", True).option("inferSchema", True).load(f"{CSV_BASE}/departamentos.csv")
+    return (
+        spark.readStream.format("cloudFiles")
+        .option("cloudFiles.format", "csv")
+        .option("cloudFiles.schemaLocation", f"{SCHEMA_BASE}/bronze_departamentos")
+        .option("header", True)
+        .option("inferSchema", True)
+        .load(f"{CSV_BASE}/departamentos")
+    )
 
-@dp.table(name="bronze_cursos", comment="Cursos de graduacao lidos de CSV.")
+@dp.table(name="bronze_cursos", comment="Cursos de graduacao ingeridos via Auto Loader.")
 def bronze_cursos():
-    return spark.read.format("csv").option("header", True).option("inferSchema", True).load(f"{CSV_BASE}/cursos.csv")
+    return (
+        spark.readStream.format("cloudFiles")
+        .option("cloudFiles.format", "csv")
+        .option("cloudFiles.schemaLocation", f"{SCHEMA_BASE}/bronze_cursos")
+        .option("header", True)
+        .option("inferSchema", True)
+        .load(f"{CSV_BASE}/cursos")
+    )
 
-@dp.table(name="bronze_professores", comment="Corpo docente lido de CSV.")
+@dp.table(name="bronze_professores", comment="Corpo docente ingerido via Auto Loader.")
 def bronze_professores():
-    return spark.read.format("csv").option("header", True).option("inferSchema", True).load(f"{CSV_BASE}/professores.csv")
+    return (
+        spark.readStream.format("cloudFiles")
+        .option("cloudFiles.format", "csv")
+        .option("cloudFiles.schemaLocation", f"{SCHEMA_BASE}/bronze_professores")
+        .option("header", True)
+        .option("inferSchema", True)
+        .load(f"{CSV_BASE}/professores")
+    )
 
 # COMMAND ----------
 
