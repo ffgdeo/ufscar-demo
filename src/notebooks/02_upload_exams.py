@@ -8,28 +8,39 @@
 
 import os
 
-# The exam PDFs are in ../data/exams/ relative to the notebooks folder.
-# In a DAB deployment, all files are synced under the bundle's workspace path.
+# Find the exam PDFs in the bundle's synced workspace files
 notebook_path = dbutils.notebook.entry_point.getDbutils().notebook().getContext().notebookPath().get()
-base_dir = "/".join(notebook_path.rsplit("/", 2)[:-2])  # up from src/notebooks/
-exams_source = f"/Workspace{base_dir}/src/data/exams"
-volume_target = "/Volumes/workspace/sistema_academico/staging/exams"
+# notebook_path is like /Workspace/Users/.../files/src/notebooks/02_upload_exams
+# We need to go up to .../files/src/data/exams
+base_dir = notebook_path.rsplit("/src/notebooks", 1)[0]
+exams_ws_dir = f"{base_dir}/src/data/exams"
 
-print(f"Source: {exams_source}")
-print(f"Target: {volume_target}")
+# On serverless, workspace files are accessible at /Workspace/<path>
+local_dir = f"/Workspace{exams_ws_dir}"
+
+print(f"Looking for PDFs in: {local_dir}")
+print(f"Files found: {os.listdir(local_dir)}")
 
 # COMMAND ----------
 
-# List source files and copy to volume using dbutils.fs.cp (preserves binary content)
-files = dbutils.fs.ls(f"file:{exams_source}")
+from databricks.sdk import WorkspaceClient
+import pathlib
+
+w = WorkspaceClient()
+volume_target = "/Volumes/workspace/sistema_academico/staging/exams"
 uploaded = 0
 
-for f in files:
-    if f.name.endswith(".pdf"):
-        src = f"file:{exams_source}/{f.name}"
-        dst = f"dbfs:{volume_target}/{f.name}"
-        dbutils.fs.cp(src, dst, recurse=False)
-        print(f"  ✅ {f.name}")
-        uploaded += 1
+for fname in sorted(os.listdir(local_dir)):
+    if not fname.endswith(".pdf"):
+        continue
+    local_path = os.path.join(local_dir, fname)
+    target_path = f"{volume_target}/{fname}"
+
+    with open(local_path, "rb") as f:
+        w.files.upload(target_path, f, overwrite=True)
+
+    size = os.path.getsize(local_path)
+    print(f"  ✅ {fname} ({size} bytes)")
+    uploaded += 1
 
 print(f"\n{uploaded} PDFs uploaded to {volume_target}")
