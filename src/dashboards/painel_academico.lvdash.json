@@ -1326,56 +1326,6 @@
         }
       ],
       "pageType": "PAGE_TYPE_CANVAS"
-    },
-    {
-      "name": "filters",
-      "displayName": "Filters",
-      "layout": [
-        {
-          "widget": {
-            "name": "filter-semestre",
-            "queries": [
-              {
-                "name": "ds_evolucao_semestre",
-                "query": {
-                  "datasetName": "ds_evolucao",
-                  "fields": [
-                    {
-                      "name": "semestre",
-                      "expression": "`semestre`"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "version": 2,
-              "widgetType": "filter-multi-select",
-              "encodings": {
-                "fields": [
-                  {
-                    "fieldName": "semestre",
-                    "displayName": "Semestre",
-                    "queryName": "ds_evolucao_semestre"
-                  }
-                ]
-              },
-              "frame": {
-                "showTitle": true,
-                "title": "Semestre"
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 0,
-            "width": 2,
-            "height": 2
-          }
-        }
-      ],
-      "pageType": "PAGE_TYPE_GLOBAL_FILTERS"
     }
   ]
 }
