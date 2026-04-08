@@ -1,0 +1,6 @@
+resources:
+  apps:
+    assistente_provas:
+      name: assistente-provas-${bundle.target}
+      description: "Assistente de Provas Anteriores — chatbot RAG sobre provas da UFSCar"
+      source_code_path: ../src/app
